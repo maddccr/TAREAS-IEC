@@ -6,6 +6,33 @@ editor: visual
 ---
 
 ```{r}
+#clase ejercicio
+
+precio <- function(gasto){
+  gasto <- gasto
+  
+  if(gasto > 20) {
+    impuesto <- 0.25
+    precio <- gasto*(1 + impuesto)
+    info <- c(impuesto, precio)
+  } else {
+    if(gasto > 10 ){ 
+      impuesto <- 0.15
+      precio <- gasto*(1 + impuesto)
+      info <- c(impuesto, precio)
+    } else {
+      if(gasto > 5){
+        impuesto <- 0.10
+        precio <- gasto*(1 + impuesto)
+        info <- c(impuesto, precio)
+      } else info <- c(0, gasto)
+    }
+  }
+  
+  print(info)
+}
+
+precio(800) 
 
 ```
 
