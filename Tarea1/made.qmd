@@ -60,3 +60,37 @@ plot_binom(p = 0.8)
 plot_binom(p = 0.5)
 
 ```
+
+# Practico 1 - Ejercicio 5
+
+*Hallar el error absoluto Ex y relativo Rx y el número de cifras significativas de la
+aproximación*
+
+-   Ex = \| x - x_gorro \|
+
+-   Rx = Ex / \|x\|
+
+-   Cifras significativas: cantidad de dígitos decimales correctos en la aproximación (desde el primero distinto de cero hasta el error)
+
+```{r}
+
+error_abs <- function(x, x_gorro){
+  abs( x - x_gorro)
+}
+
+error_rel <- function(x, x_gorro){
+  error_abs(x, x_gorro)/abs(x)
+}
+
+#a) 
+x = 2.71828182 ; x_g = 2.7182 #5 cifras sig
+error_abs(x, x_g) ; error_rel(x, x_g) 
+
+#b)
+y = 98350 ; y_g = 98000 #2 cifras sig (?)
+error_abs(y, y_g) ; error_rel(y, y_g)
+
+#c) 
+z= 0.000068 ; z_g = 0.00006 #1 cifra sig
+error_abs(z, z_g) ; error_rel(z, z_g)
+```
