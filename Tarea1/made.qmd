@@ -1,0 +1,62 @@
+---
+title: "tarea1Made"
+format: html
+editor: visual
+---
+
+## Practico 0 - Ejercicio 2
+
+a\)
+
+```{r}
+#Para la parte 2 y 3 tomamos mu = 0
+
+dist_cauchy <- function(mu = 0, delta){
+  x <- seq(-5, 5, by = delta) #secuencia con distancia delta
+  probs <- (1/pi)*(1/(1 + (x - mu)^2)) #densidad // colas pesadas
+  return(list(x = x, probs = probs))
+} 
+
+#Divido la funcion en dos por la diferencia en escala a la hora de graficar
+#Parte 2 y 3
+delta <- c(0.5, 0.1, 0.01)
+for(d in delta){
+  dt <- dist_cauchy(0, d)
+  plot(dt$x, dt$probs, col = "red", xlab = "x", ylab = "Densidad",
+       cex = d, main = "Densidad Distribución de Cauchy(μ=0)",
+       sub = paste0("(con distancia entre valores = ", d, ")"))
+}
+
+#GRAFICAR CON TYPE = "l" ?? 
+
+#Parte 4
+par(mfrow = c(1,2))
+mu <- c(0, 5)
+for(m in mu){
+  dt <- dist_cauchy(m, 0.01)
+  plot(dt$x, dt$probs, col = "red", xlab = "x", ylab = "Densidad", type = "l",
+       lwd = 2, main = paste0("Densidad Distribución de\n Cauchy(μ=", m, ")"))
+}
+
+```
+
+b\)
+
+```{r}
+#Distribucion binomial // p en [0,1], x en {0, ..., n}
+
+#descartado // sapply(x, function(y) dist_binom(y, p, n))
+
+plot_binom <- function(n = 50, p){
+  x <- 0:n
+  probs <- choose(n,x)*(p^x)*(1-p)^(n - x)
+  plot(x, probs, type = "h", xlab = "x", ylab = "P(X = x)", col = "blue",
+       main = paste0("Cuantia Distribución Binomial (",n, ", ", p,")"))
+  points(x, probs, col = "blue", pch = 20)
+}
+
+plot_binom(p = 0.2)
+plot_binom(p = 0.8)
+plot_binom(p = 0.5)
+
+```
