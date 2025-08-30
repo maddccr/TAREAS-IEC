@@ -1,0 +1,62 @@
+---
+title: "Ejercicio 3 y 4"
+format: html
+editor: visual
+---
+
+## Ejercicio 3
+
+Una empresa le ofrece un puesto de trabajo por un año bajo las siguientes condiciones:
+En su primer día de trabajo ganará 1 peso. El segundo 2 pesos, el tercer 3 pesos y así sucesivamente.
+a - ¿Cuánto dinero ganará al cabo de un año (no bisiesto)?. ¿Cuánto sería su ingreso promedio
+mensual?.
+
+```{r}
+sueldo <- sum(1:365)
+sueldo
+promedio_mensual <- sueldo/12 
+promedio_mensual
+```
+
+b - ¿Y luego de dos años?, ¿y el ingreso promedio mensual?
+
+```{r}
+sueldo2 <- sueldo + sum(366:730) 
+sueldo2
+promedio_mensual2 <- sueldo2/24
+promedio_mensual2
+```
+
+c - Responder 1. y 2. si comienza ganando 100 pesos y tiene el mismo régimen de aumento.
+
+```{r}
+sueldo100 <- sum(100:464)
+sueldo100
+promedio100 <- sueldo100/12
+promedio100
+
+sueldo100_2 <- sueldo100 + sum(465:829)
+sueldo100_2
+promedio100_2 <- sueldo100_2/24
+promedio100_2
+```
+
+### Ejercicio 4
+
+Un amigo suyo le comunica que perdió las boletas correspondientes a tres compras distintas de
+los bienes A,B y C. Sin embargo, recuerda que el primer día compró 3 unidades del bien A, 2
+del C y gastó 360 pesos. El segundo día compró 4 unidades del bien A, 1 del B y 1 del C y
+gastó 480 pesos, y el tercer día compró 6 unidades del bien B y 5 del C gastando 450 pesos.
+a - ¿Cuánto cuesta cada bien? (resolver analíticamente)
+
+![](images/WhatsApp Image 2025-08-30 at 12.13.13-01.jpeg)
+b - ¿Cuánto cuesta cada bien? (resolver usando R)
+
+```{r}
+a <- matrix(c(4,3,0,1,0,6,1,2,5 ), nrow = 3)
+
+b <- c(480,360,450)
+
+solucion <- solve(a, b)
+solucion
+```
