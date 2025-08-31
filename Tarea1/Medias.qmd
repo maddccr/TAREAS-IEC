@@ -1,0 +1,47 @@
+---
+title: "Medias"
+format: html
+editor: visual
+---
+
+## Tipos de medias
+
+Responder qué es la media aritmética, geométrica, armónica (poner fuente de donde se extrajo la información) ver cuál es la más chica y cuál la más grande. Si es posible con un juego de datos a elección calcular las 3 medias
+
+La **media aritmética**, también llamada promedio, es un concepto básico de estadística que consiste en la suma de un conjunto de números dividida entre la cantidad de sumandos. Esta medida, que corresponde a una de las llamadas medidas de centralización, se considera el centro de los datos porque equilibra los valores por defecto y por exceso respecto a la media. Es decir, si se suman las desviaciones de los valores respecto a la media se obtiene cero.
+
+$$
+\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i = \frac{x_1 + x_2 + \cdots + x_n}{n}  
+$$
+
+La desventaja principal de esta media es que está muy influida por los valores atípicos, ya que un único valor muy alto o muy bajo es capaz de aumentar o disminuir significativamente el valor.
+
+Por otro lado, la **media geométrica** de un conjunto de n números es la raíz enésima del producto de estos. Normalmente se utiliza para comparar conjuntos de valores de diferentes unidades de medida. Esta media no es tan sensible a los datos atípicos como la aritmética, pero su interpretación resulta menos intuitiva. Además, si uno de los valores es cero la media se anula. Solamente sirve para valores positivos.
+
+$$
+\bar{x} = \left( \prod_{i=1}^{n} x_i \right)^{\tfrac{1}{n}}
+$$
+
+Finalmente, la **media armónica** es el inverso de la media aritmética de los inversos de un conjunto de n valores. Es decir, se calcula dividiendo n entre la suma de los valores inversos del conjunto. En este caso, los valores atípicos altos no afectan la media, sin embargo, los bajos sí la influencian. Además, al igual que la geométrica, no está definida en el caso de que exista un valor nulo. Por estas razones, suele ser usada para promediar velocidades o tiempos.
+
+$$
+\bar{x} = \frac{n}{\sum_{i=1}^{n} \tfrac{1}{x_i}}
+$$\
+Estas medidas de resumen se conocen como las “medias pitagóricas”. Para todo conjunto de datos se cumple que $\min \;\leq\; M_H \;\leq\; M_G \;\leq\; M_A \;\leq\; \max$ . Esta relación entre ellas es una generalización de la desigualdad de las medias aritmética y geométrica que establece que la media aritmética de un conjunto de números reales positivos es mayor o igual que la media geométrica del mismo conjunto. Y la igualdad se cumple únicamente cuando todos los valores son iguales.
+
+### Cálculo de las tres medias
+
+```{r}
+datos <- rexp(100) #simulamos 100 datos con distribucion exponencial
+
+media_aritmetica <- mean(datos)
+
+media_geometrica <- prod(datos)^(1/length(datos))
+
+media_armonica <- length(datos)/sum(1/datos)
+
+data.frame(
+  Medias = c("Aritmética", "Geométrica", "Armónica"), 
+  Valores = c(media_aritmetica, media_geometrica, media_armonica)
+)
+```
