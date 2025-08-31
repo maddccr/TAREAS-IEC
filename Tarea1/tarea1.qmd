@@ -5,9 +5,9 @@ format: html
 editor: visual
 ---
 
-# Práctico 0 
+# Práctico 0
 
-## Ejercicio 1 
+## Ejercicio 1
 
 Parte a) Estudio analítico y bosquejo gráfico (ver pdf adjunto)
 
@@ -50,7 +50,7 @@ for(p in parametros){
 }
 ```
 
-## Ejercicio 2 
+## Ejercicio 2
 
 Parte a) Estudio analítico y bosquejo gráfico (ver pdf adjunto)
 
@@ -158,11 +158,11 @@ solucion
 
 # Práctico 1
 
-## Ejercicio 1 
+## Ejercicio 1
 
 Ver pdf adjunto
 
-## Ejercicio 5 
+## Ejercicio 5
 
 *Hallar el error absoluto Ex y relativo Rx y el número de cifras significativas de la aproximación*
 
@@ -198,7 +198,7 @@ error_abs(z, z_g) ; error_rel(z, z_g)
 
 *Responder qué es la media aritmética, geométrica, armónica (poner fuente de donde se extrajo la información) ver cuál es la más chica y cuál la más grande. Si es posible con un juego de datos a elección calcular las 3 medias*
 
-## Definiciones 
+## Definiciones
 
 La **media aritmética**, también llamada promedio, es un concepto básico de estadística que consiste en la suma de un conjunto de números dividida entre la cantidad de sumandos. Esta medida, que corresponde a una de las llamadas medidas de centralización, se considera el centro de los datos porque equilibra los valores por defecto y por exceso respecto a la media. Es decir, si se suman las desviaciones de los valores respecto a la media se obtiene cero.
 
@@ -216,6 +216,8 @@ Finalmente, la **media armónica** es el inverso de la media aritmética de los 
 
 $$ \bar{x} = \frac{n}{\sum_{i=1}^{n} \tfrac{1}{x_i}} $$\
 Estas medidas de resumen se conocen como las “medias pitagóricas”. Para todo conjunto de datos se cumple que $\min \;\leq\; M_H \;\leq\; M_G \;\leq\; M_A \;\leq\; \max$ . Esta relación entre ellas es una generalización de la desigualdad de las medias aritmética y geométrica que establece que la media aritmética de un conjunto de números reales positivos es mayor o igual que la media geométrica del mismo conjunto. Y la igualdad se cumple únicamente cuando todos los valores son iguales.
+
+Fuente: Wikipedia, Fundamentos de Estadística (Daniel Peña)
 
 ## Cálculo de las tres medias
 
