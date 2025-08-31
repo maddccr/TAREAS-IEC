@@ -1,11 +1,13 @@
-# Función que genera densidades de una normal
-dist_normal <- function(mu = 0,sigma = 1,delta){
+# Práctico 0 - Ejercicio 1
+
+# Parte b)
+dist_normal <- function(mu = 0,sigma = 1,delta){  # Función que genera densidades de una normal
   x <- seq(-5, 5, by = delta) # valores de x de -5 a 5
   probs <- (1/(sqrt(2*pi)*sigma)) * exp(-((x - mu)^2)/(2*sigma^2)) 
   return(list(x = x, probs = probs)) # devuelve lista con x y densidades
 }
 
-# Grafica la normal con diferentes distancias entre los puntos
+# Parte c) Grafica la normal con diferentes distancias entre los puntos
 delta <- c(0.5, 0.1, 0.01)
 for(d in delta){
   dt <- dist_normal(0,1,d)
@@ -14,8 +16,9 @@ for(d in delta){
        sub = paste0("(con distancia entre valores = ", d, ")"))
 }
 
-# Prepara ventana para 3 gráficos juntos
-par(mfrow = c(1,3)) 
+# Parte d)
+
+par(mfrow = c(1,3)) # Prepara ventana para 3 gráficos juntos
 
 # Diferentes combinaciones de media y desviación
 parametros <- list(
