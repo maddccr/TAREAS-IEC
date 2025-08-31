@@ -5,7 +5,7 @@ dist_normal <- function(mu = 0,sigma = 1,delta){
   return(list(x = x, probs = probs)) # devuelve lista con x y densidades
 }
 
-# Probando diferentes valores delta para ver el efecto en la curva
+# Grafica la normal con diferentes distancias entre los puntos
 delta <- c(0.5, 0.1, 0.01)
 for(d in delta){
   dt <- dist_normal(0,1,d)
@@ -14,7 +14,7 @@ for(d in delta){
        sub = paste0("(con distancia entre valores = ", d, ")"))
 }
 
-# Preparar ventana para 3 gráficos juntos
+# Prepara ventana para 3 gráficos juntos
 par(mfrow = c(1,3)) 
 
 # Diferentes combinaciones de media y desviación
