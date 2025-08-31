@@ -217,7 +217,7 @@ Finalmente, la **media armónica** es el inverso de la media aritmética de los 
 $$ \bar{x} = \frac{n}{\sum_{i=1}^{n} \tfrac{1}{x_i}} $$\
 Estas medidas de resumen se conocen como las “medias pitagóricas”. Para todo conjunto de datos se cumple que $\min \;\leq\; M_H \;\leq\; M_G \;\leq\; M_A \;\leq\; \max$ . Esta relación entre ellas es una generalización de la desigualdad de las medias aritmética y geométrica que establece que la media aritmética de un conjunto de números reales positivos es mayor o igual que la media geométrica del mismo conjunto. Y la igualdad se cumple únicamente cuando todos los valores son iguales.
 
-### Cálculo de las tres medias
+## Cálculo de las tres medias
 
 ```{r}
 datos <- rexp(100) #simulamos 100 datos con distribucion exponencial
