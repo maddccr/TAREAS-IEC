@@ -1,0 +1,181 @@
+---
+title: "tarea2"
+format: html
+editor: visual
+author: Madeline Cecere, Florencia Pricolli, Sofia Lerner
+---
+
+# TAREA 2
+
+## LABORATORIO
+
+### Ejercicio 3
+
+Escriba un código para determinar cuanto valdría el impuesto al gasto en galletitas correspondiente a una persona de gasto x si las franjas de consumo e impuestos correspondientes a cada una fuesen las siguientes.
+
+```{r, echo=FALSE, warning=FALSE}
+
+impuesto <- function(gasto){ 
+  #asiga el impuesto correspondiente y calcula el precio para las distintos rangos de gasto
+  if(gasto > 20) {
+     impuesto <- 0.25
+  } else if (gasto > 10){
+     impuesto <- 0.15
+  } else if (gasto > 5) {
+     impuesto <- 0.10
+  } else impuesto <-0
+  
+  precio <- gasto*(1 + impuesto)
+  return(list( impuesto = impuesto, precio = precio)) #devuelve una lista con el impuesto y el precio final
+}
+
+impuesto(15)
+
+```
+
+### Ejercicio 7
+
+La sucecion de Fibonacci es una sucesión infinita de números naturales que comienza con los números 0 y 1, y a partir de estos, cada término es la suma de los dos anteriores.
+
+```{r}
+
+#Serie de fibonacci
+
+fibo_k <- function(k){ 
+  #calcula el valor de los primeros k elementos de la serie
+  x <- c(0,1) #condiciones iniciales
+  i <- 1
+  
+  if(k > 3){
+    for(i in 3:k){
+    x[i] <- x[i - 1] + x[i - 2]
+    }
+  }
+  
+  return(x) #devuelve vector con los k primeros
+}
+
+fibo_k(5)
+
+```
+
+### Ejercicio 12
+
+Volviendo al ejemplo de la sucesión de Fibonacci, supongamos que deseamos saber cuál es el primer término mayor a 100.
+
+```{r}
+
+fibo_hasta <- function(hasta){
+  #devuelve el indice del termino cuyo valor no supera el valor dado (hasta)
+  x <- c(0,1)
+  i <- 1
+  while( x[i + 1] <= hasta) { #se pasa en uno
+    
+    x[i + 2] <- x[i] + x[i + 1]
+    i <- i + 1
+  } 
+  #devuelve el anterior al elemento que supera la cond.
+  return(list(indice = i, valor = x[i])) 
+}
+
+fibo_hasta(100)
+
+```
+
+### EXTRA: raices complejas
+
+```{r}
+raices <- function(a = 1, b =0, c=0){
+  
+  if( a == 0) stop("a debe ser distinto de cero")
+  delta <- b^2 - 4*a*c
+  
+    if ( delta > 0) {
+      x1 <- (-b + sqrt(delta))/(2*a)
+      x2 <- (-b - sqrt(delta))/(2*a)
+      raices <- c(x1, x2)
+    } else {
+      if(delta == 0){
+        raices <- -b/(2*a)
+      } else {
+        delta <- as.complex(delta)
+        x1 <- (-b + sqrt(delta))/(2*a)
+        x2 <- (-b - sqrt(delta))/(2*a)
+        raices <- c(x1, x2)
+      }
+    }  
+    
+  return(raices)
+}
+
+raices(1, 0, 1)
+
+#mejora? pasar un vector de largo 3 y usar a = pol[1]; b = pol[2] ; c = pol[3]
+```
+
+## PRACTICO 2
+
+### Ejercicio 4 - (Ejercicio 8 del lab)
+
+-SOFI
+
+## 
+
+```{r}
+#dif return vs print
+#Ejemplo6 TRIANGULO DE PASCAL recostado
+n <- 10
+P <- matrix (0 ,n , n )
+P [ ,1] <-1
+diag ( P ) <-1
+P
+for ( i in 3: n ) {
+  for ( j in 2:( i -1) ) {
+    P [i , j ] <- P [i -1 , j ]+ P [i -1 ,j -1]
+    P
+  }
+  print(P)
+}
+lower.tri(P) #????????????
+
+```
+
+### Ejercicio 5
+
+A lo largo de los anos han habido numerosas formas de aproximarse el numero , una de ellas es mediante la formula de Viete.
+
+```{r}
+#pi = 3.14159
+
+viete <- function(k){
+  
+  if(k < 1 || k > 20) stop("K debe ser >= 1 y <= 20")
+  
+  a_k <- 0
+  for(i in 1:(k - 1)){
+    a <- sqrt(2 + a_k)
+    a_k <- a
+  }
+  
+  return((2^k)*sqrt(2 - a_k))
+}
+
+viete(10) #10 de una
+
+hallar_k <- function(sig = 1){ #k >= 1
+  #calcula el k necesario para una aproximacion de sig cifras decimales
+  k <- 1
+  p_sig <- signif(pi, sig + 1)
+  while( viete(k) <= p_sig ){
+    k <- k + 1
+  }
+  return(k)
+}
+
+hallar_k(5) #10
+
+#no funciona con !=, si con <= 
+#metodo abs( aprox - real) > tol // o usar round y !=
+#solo imprime 6 cifras, usar format(viete(k), digits = num)
+
+```
