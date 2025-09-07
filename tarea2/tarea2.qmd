@@ -115,11 +115,26 @@ raices(1, 0, 1)
 
 ## PRACTICO 2
 
+### Ejercicio 3
+
+```{r}
+matriz_hilbert <- function(n) {
+  largo <- c(1:n)
+  matriz <- matrix(0, nrow = n, ncol = n)
+  for (i in largo) {
+    for (j in largo) {
+      matriz[i,j] = (1/(i + j - 1))
+    }
+  }
+  return(matriz)
+}
+
+#El paquete matrixcalc incluye una función para generar una matriz de Hilbert llamada hilbert.matrix()
+```
+
 ### Ejercicio 4 - (Ejercicio 8 del lab)
 
 -SOFI
-
-## 
 
 ```{r}
 #dif return vs print
