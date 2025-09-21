@@ -197,3 +197,61 @@ e <- function(x) c(log(x)*exp(-x), exp(-x)*(1/x - log(x)))
 newtonraphson_show(e, 2) #diverge
 newtonraphson_show(e, 0.5) #converge a 1
 ```
+
+Ejercicio 4
+
+Puntos fijos de funciones con fixedpoint_show
+
+```{r}
+
+fixedpoint_show <- function(ftn, x0, xmin = x0-1, xmax = x0+1) {
+  # applies fixed-point method to find x such that ftn(x) == x
+  # x0 is the starting point
+  # subsequent iterations are plotted in the range [xmin, xmax]
+  # plot the function
+  x <- seq(xmin, xmax, (xmax- xmin)/200)
+  fx <- sapply(x, ftn)
+  plot(x, fx, type = "l", xlab = "x", ylab = "f(x)",
+       main = "fixed point f(x) = x", col = "blue", lwd = 2)
+  lines(c(xmin, xmax), c(xmin, xmax), col = "blue")
+  # do first iteration
+  xold <- x0
+  xnew <- ftn(xold)
+  lines(c(xold, xold, xnew), c(xold, xnew, xnew), col = "red")
+  lines(c(xnew, xnew), c(xnew, 0), lty = 2, col = "red")
+  # continue iterating while user types "y"
+  cat("last x value", xnew, " ")
+  continue <- readline("continue (y or n)? ") == "y"
+  while (continue) {
+    xold <- xnew;
+    xnew <- ftn(xold);
+    lines(c(xold, xold, xnew), c(xold, xnew, xnew), col = "red")
+    lines(c(xnew, xnew), c(xnew, 0), lty = 2, col = "red")
+    cat("last x value", xnew, " ")
+    continue <- readline("continue (y or n)? ") == "y"
+  }
+  return(xnew)
+}
+
+# (a) cos(x), para x0=1,3 y 6 :
+f_a<-function(x)cos(x)
+
+fixedpoint_show(f_a,1)
+fixedpoint_show(f_a,3) 
+fixedpoint_show(f_a,6)
+#en los 3 casos cos(x) converge aproximadamente a 0,739
+
+# (b) exp(exp(-x)) para x0=2:
+f_d<-function(x) exp(exp(-x))
+fixedpoint_show(f_b,2)
+
+# (c)  x -log(x) + exp(-x), para x0=2:
+f_c<-function(x) x-log(x)+exp(-x)
+fixedpoint_show(f_c,2)
+
+#las funciones b y c convergen a 1.3098
+
+# (d)  x + log(x) - exp(-x), para x0=2:
+f_d<-function(x) x+log(x)-exp(-x)
+fixedpoint_show(f_d,2) #diverge
+```
