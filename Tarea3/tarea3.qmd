@@ -1,0 +1,54 @@
+---
+title: "tarea3"
+format: html
+editor: visual
+---
+
+Ejercicio 8
+
+Modificacion de la funcion fixedpoint (10.2) para funciones de Rd en Rd. Cambiamo la funcion abs() por norm()
+
+```{r}
+
+#funcion sacada del libro:
+fixedpoint <- function(ftn, x0, tol = 1e-9, max.iter = 100) {
+
+ # applies the fixed-point algorithm to find x such that ftn(x) == x
+ # ftn  R^d -> R^d, d > 1.
+ # x0 is the initial guess at the fixed point
+ #LA FUNCION NORM CALCULA LA NORMA DE VECTORES
+ 
+ xold <- x0
+ xnew <- ftn(xold)
+ iter <- 1
+ cat("At iteration 1 value of x is:", xnew, "\n")
+ #modificamos abs por norm
+ while ((norm(as.matrix(xnew-xold)) > tol) && (iter < max.iter)) {
+ xold <- xnew;
+ xnew <- ftn(xold);
+ iter <- iter + 1
+ cat("At iteration", iter, "value of x is:", xnew, "\n")
+ }
+ # output depends on success of algorithm
+ if (norm(as.matrix(xnew-xold)) > tol) {
+ cat("Algorithm failed to converge\n")
+ return(NULL)
+ } else {
+ cat("Algorithm converged\n")
+ return(xnew)
+ }
+}
+
+#definir la funcion para evaluar
+f <- function(x){
+  c(log(1 + x[1] + x[2]), log(5 - x[1] - x[2]))
+}
+
+x0 <- c(1,1)
+
+fixedpoint(f, x0)
+```
+
+```{r}
+
+```
