@@ -162,7 +162,7 @@ Ejercicio 1-Ejemplo para regla del trapecio
 ```{r}
 # program spuRs/resources/scripts/trapezoid.r
 
-# Funcion para calcular la integral numerica con la regla del trapecio
+# Funcion para calcular la integral numerica de ftn con la regla del trapecio
 trapezoid <- function(ftn, a, b, n = 100) {
   # numerical integral of ftn from a to b
   # using the trapezoid rule with n subdivisions
@@ -172,7 +172,7 @@ trapezoid <- function(ftn, a, b, n = 100) {
   h <- (b-a)/n  #Distancia entre nodos 
   x.vec <- seq(a, b, by = h) #Vector de nodos
   f.vec <- sapply(x.vec, ftn) #Devuelve un vector de nodos evaluados enn la funcion
-  #hace la suma de areas de los trapecios formados entre los nodos
+  #Aplica la formula de la regla del trapecio extendido
   T <- h*(f.vec[1]/2 + sum(f.vec[2:n]) + f.vec[n+1]/2) 
   return(T)
 }
