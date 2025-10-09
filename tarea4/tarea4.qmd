@@ -5,7 +5,7 @@ format: html
 editor: visual
 ---
 
-## Cuadratura Gaussiana 
+## Cuadratura Gaussiana
 
 Ejemplo 1 de la PPT
 
@@ -73,7 +73,7 @@ cuadratura_n(fx)
 
 ```
 
-## PRACTICO 4 
+## PRACTICO 4
 
 Ej. 6 - Traducir de matlab a R
 
@@ -119,4 +119,40 @@ resultado$C #siendo x^3 el primer termino los coef deberian ser (1, 0, 0, 0)
 #The poly function in MATLAB is used to generate the coefficients of a polynomial from its roots or to find the characteristic polynomial of a matrix. No encontre equivalente directo en R
 ```
 
-## PRACTICO 5 
+## PRACTICO 5
+
+*Documentacion de codigo (lo que entendimos maso)*
+
+```{r}
+#program spuRs/resources/scripts/simpson_n.r
+#Regla de simpson aproxima la f(x) con pols de grado 2 (mejor que el del trapecio que es con rectitas)
+
+
+simpson_n <- function(ftn, a, b, n = 100) {
+ #Integracion numertica para intervalo finito [a,b] con regla de simpson 
+ #ftn funcion real
+ #n > 0 numero de subdivisiones DEBE SER PAR
+
+ n <- max(c(2*(n %/% 2), 4)) #%/% div entera // forzar n par
+ h <- (b-a)/n #h es el paso - distancia entre nodos (equiespaciados)
+ 
+ #Vectores de nodos
+ x.vec1 <- seq(a+h, b-h, by = 2*h) #indice impar 
+ x.vec2 <- seq(a+2*h, b-2*h, by = 2*h) #indice par
+ 
+ #Imagen de la funcion en los nodos
+ f.vec1 <- sapply(x.vec1, ftn)
+ f.vec2 <- sapply(x.vec2, ftn)
+ 
+ #Aplicacion de la formula
+ # ind par * 2, ind impar *4 // salvo extremos
+ S <- h/3*(ftn(a) + ftn(b) + 4*sum(f.vec1) + 2*sum(f.vec2))
+ return(S)
+}
+
+
+#Ejemplos
+ftn6<-function(x) return(4*x**3)
+ftn7<-function(x) return(1.25*sin(x/2)+3)
+simpson_n(ftn7,0,9,4)
+```
