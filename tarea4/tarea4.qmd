@@ -1,0 +1,122 @@
+---
+title: "Tarea 4 - IEC 2025"
+author: "Madeline Cecere, Florencia Pricolli, Sofia Lerner"
+format: html
+editor: visual
+---
+
+## Cuadratura Gaussiana 
+
+Ejemplo 1 de la PPT
+
+```{r}
+
+library(statmod)
+
+#Funcion de la ppt
+cuadratura<-function(FUN,n=2, cual="legendre"){
+ xw<-gauss.quad(n,kind=cual)
+ nodos<-xw$nodes
+ pesos<-xw$weights
+ 
+ Int<-sum(pesos*FUN(nodos))
+ invisible(Int) }
+
+#Definimos la funcion usando el CV: Int^a_b x = t - (a + b)/2 / (a - b)/2
+#el metodo se aplica en el intervalo [-1 ; 1]
+#te^(2t) --> CV t = 2x +2 con dt = 2dx --> (4x + 4)e^(4x + 4)
+fx <- function(x) (4*x + 4)*exp(4*x + 4)
+
+#Calculamos la integral para distintos n
+
+n2<-cuadratura(fx,2)
+n3<-cuadratura(fx,3)
+n4<-cuadratura(fx,4)
+
+#El valor real de la integral es e^4(7e^4 -3)/4 ~ 5175.7278
+Int <- exp(4)*(7*exp(4) -3)/4
+
+#ERRORES
+
+errorRel <- function(x, aprox){ # con x distinto de cero
+  return(abs(x - aprox)/x)
+}
+
+errorRel(Int, n2)
+errorRel(Int, n3)
+errorRel(Int, n4)
+
+```
+
+Para determinar la cantidad de nodos necesarios esteblecemos un nivel de tolerancia y vamos calculando el error relativo de las distintas aproximaciones
+
+```{r}
+
+cuadratura_n <- function(FUN, cual = "legendre", tol = 1e-5, max_it = 1000){
+  #Evaluamos una primera aprox. que se busca mejorar
+  Int0 <- cuadratura(FUN, 2)
+  error_rel <- Inf
+  n <- 3 #vamos a ir aumentando el n
+  
+  while ((error_rel > tol) & ( n < max_it)) { #establecemos una max de iteracion para evitar bucles inf
+    Int1 <- cuadratura(FUN, n)
+    error_rel <- errorRel(Int0, Int1) 
+    n <- n + 1
+    Int0 <- Int1
+  }
+  
+  return(list(value = Int0, iteraciones = n))
+}
+
+#Aplicamos para nuestra funcion
+cuadratura_n(fx)
+
+```
+
+## PRACTICO 4 
+
+Ej. 6 - Traducir de matlab a R
+
+```{r}
+
+lagrange <- function(x, y){
+  #entrada vector de abcisas (x) y ordenadas (y)
+  #salida matrices Ln (coef de Ln,k) y C (coef del pol interpolante P(X)) 
+  #OJO CON EL ORDEN DE LOS POL! devuelve coef de mayor a menor orden
+  
+  w <- length(x)
+  Ln <- matrix(0, nrow = w, ncol = w) #inicializamos la matriz con ceros
+  
+  #HACER LA PRODUCTORIA HASTA N con k != de j
+  for( k in 1:w) {
+    v = 1 #inicializar con 1 //neutro multiplicacion 
+      for(j in 1:w){
+        if( k != j) {
+          p <- c(1, -x[j]) #los factores de la productoria
+          v = convolve(v, rev(p),  type = "open")/ (x[k] - x[j]) 
+          
+          #llenamos la matriz, los vacios con ceros
+          Ln[k, ] <- c(rep(0, w - length(v)), v)
+        }
+      }
+    
+  }
+  
+  
+  C <- as.numeric(y %*% Ln)  #C = Y*Ln // CL de las bases y las absisas (f(xi))
+  return(list(C = C, Ln = Ln))
+  
+}
+
+#Aplicacion 
+x <- c(0, 1, 2, 3)
+y <- x^3
+
+resultado <- lagrange(x, y)
+resultado$C #siendo x^3 el primer termino los coef deberian ser (1, 0, 0, 0)
+
+#funcion conv() en matlab --> convolucion // en R convolve()
+#The poly function in MATLAB is used to generate the coefficients of a polynomial from its roots or to find the characteristic polynomial of a matrix. No encontre equivalente directo en R
+```
+
+## PRACTICO 5 
