@@ -156,3 +156,47 @@ ftn6<-function(x) return(4*x**3)
 ftn7<-function(x) return(1.25*sin(x/2)+3)
 simpson_n(ftn7,0,9,4)
 ```
+
+Ejercicio 1-Ejemplo para regla del trapecio
+
+```{r}
+# program spuRs/resources/scripts/trapezoid.r
+
+# Funcion para calcular la integral numerica con la regla del trapecio
+trapezoid <- function(ftn, a, b, n = 100) {
+  # numerical integral of ftn from a to b
+  # using the trapezoid rule with n subdivisions
+  #
+  # ftn is a function of a single variable
+  # we assume a < b and n is a positive integer
+  h <- (b-a)/n  #Distancia entre nodos 
+  x.vec <- seq(a, b, by = h) #Vector de nodos
+  f.vec <- sapply(x.vec, ftn) #Devuelve un vector de nodos evaluados enn la funcion
+  #hace la suma de areas de los trapecios formados entre los nodos
+  T <- h*(f.vec[1]/2 + sum(f.vec[2:n]) + f.vec[n+1]/2) 
+  return(T)
+}
+#Ejemplo
+ftn6<-function(x) return(4*x**3)
+primitiva<-function(x) return(x**4)
+a<-0
+b<-1
+n<-4
+h<-(a+b)/n
+h0<-c(a,0)
+h1<-seq(a,b,h) #Vector de n+1=5 nodos con distancia h=0,25 entre si en el intervalo [0,1]
+rango<-seq(a,2*b,0.001) #Crea un rango de valores para graficar la funcion ftn6
+plot(rango,(ftn6(rango)),type="l",xlim=c(a,b+1),ylim=c(a,ftn6(b)+1),ylab="f(x)")
+abline(v=b,col=2) 
+for (i in 1:n ){
+  segments(h1[i],ftn6(h1[i]),h1[i+1],ftn6(h1[i+1])) #Grafica la parte superior de los trapceios
+  abline(v=h1[i],col=3,lty=2) #Marca con rectas verticales cada subdivision
+}
+
+#Calcula el error como la dif entre la integral numerica calculada con el metodo del trapecio y e valor exacto de la integral de la funcion
+trapezoid(ftn6,0,1,n)
+(Error=trapezoid(ftn6,0,1,n)-(primitiva(b)-primitiva(a)))
+legend(b*(1.1),ftn6(b)+1,paste("Error",Error))
+
+
+```
