@@ -75,14 +75,13 @@ ABM <- function(K, iter, p_death, p_birth) {
     N <- c(N, sum(habitat == 1))
   
     
- habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
 
-image(
-  t(habCuadrado[nrow(habCuadrado):1, ]),
-  col=c("white","black"),
-  axes=FALSE,
-  asp=1
-)
+
+    if(t %in% seq(1, iter - iter/2, by = 5)){
+       habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
+       image(habCuadrado, col = c("white","black"), axes = FALSE, asp = 1)
+    }
+
 
 }
   
@@ -96,7 +95,7 @@ return(N)
 
 
 #arranca optima // abundancia de recursos 
-N <- ABM(100, 100, 0.3, 0.8)
+N <- ABM(100, 60, 0.3, 0.8)
 
 
 plot(N, type="l", 
@@ -111,7 +110,7 @@ plot(N, type="l",
 ```{r}
 
 #EXTENDER EL MODELO AGREGANDO SEXO BIOLOGICO
-ABM_extencion <- function(K, iter, p_death, p_birth) {
+ABM_ext <- function(K, iter, p_death, p_birth) {
   
   #Inicializar el ABM
   #Creacion del ambiente
@@ -121,7 +120,9 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
   habitat <- rep(0, L) #habitad vacia
   
   #Cantidad inicial de agentes (1%)
-  N0 <- round(0.01 * K) #incorporar como parametro? 
+  N0 <- round(0.05 * K) #incorporar como parametro? 
+  
+  #PARA EVITAR EXTINCION SUBITA > 5%
   
   #Posicionar de forma aleatoria
   habitat[sample(1:L, N0)] <- 1 #1 = lleno
@@ -129,6 +130,10 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
   #Lo que se busca monitonear es la cantidad de agentes en el tiempo
   N <- c() #crecieminto dinamico
   
+  #INICIALIZAR LA EXTENCION
+  bio_sex <- rep(NA, L)
+  bio_sex[which(habitat ==1)] <- rbinom(N0, 1, 0.5)
+  #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con 50% de prob
   
   #ahora si
   
@@ -141,6 +146,7 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
     for(agente in vivos){
       if( runif(1) < p_death){
         habitat[agente] <- 0
+        bio_sex[agente] <- NA
       }
     }
     
@@ -152,10 +158,14 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
     
     
     for(agent in vivos){
-      if (runif(1) < p_birth_K){
-        libres <- which(habitat == 0) #ind de espacios libres en la grilla
-        if(length(libres) > 0){ 
-        habitat[sample(libres, 1)]  <- 1 #elijo un ind aleatorio para colocar
+      if(!is.na(bio_sex[agent]) & bio_sex[agent] == 1) {
+        if (runif(1) < p_birth_K){
+          libres <- which(habitat == 0) #ind de espacios libres en la grilla
+          if(length(libres) > 0){ 
+          i <- sample(libres, 1)
+          habitat[i]  <- 1 #elijo un ind aleatorio para colocar
+          bio_sex[i] <- rbinom(1, 1, 0.5)
+          }
         }
       }
     }
@@ -163,12 +173,19 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
   #Actualizar la cantidad de agentes
     
     N <- c(N, sum(habitat == 1))
-  
     
- habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
-
-
-
+    plot_grid <- rep(0, L)
+    plot_grid[which(habitat == 1 & bio_sex == 0)] <- 1
+    plot_grid[which(habitat == 1 & bio_sex == 1)] <- 2
+    
+    
+    if(t %in% seq(1, iter - iter/2, by = 5)){
+        
+      habCuadrado <- matrix(plot_grid, nrow=habSize, byrow=TRUE)
+      image(habCuadrado, col = c("white", "pink", "purple"), axes = FALSE, asp = 1)
+      #title(main = paste("Iteración", t, " - N =", N[length(N)]))
+    }
+  
 }
   
 #intento de vizualizacion
@@ -178,5 +195,17 @@ ABM_extencion <- function(K, iter, p_death, p_birth) {
 return(N)
   
 }
+
+
+N <- ABM_ext(1000, 60, 0.1, 0.9)
+
+
+plot(N, type="l", 
+       xlab="Tiempo", ylab="Población N(t)",
+       main="ABM - Crecimiento Logístico")
+
+
+#1000 03 - 09 extincion
+
 
 ```
