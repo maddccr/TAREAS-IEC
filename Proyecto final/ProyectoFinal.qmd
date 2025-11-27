@@ -465,11 +465,57 @@ sensibilidad <- function(K = 1000, iter = 100, p_birth = 0.9, reps = 50){
  
 }
 
-#sensibilidad()
+res <- sensibilidad()
 
 
 ```
 
 ```{r}
 #INTENTAR GRAFICAR CURVA 3D
+
+
+pd <- res$p_death #cols x
+t <- 1:nrow(res$mean_N) #filas y
+z <- res$mean_N
+
+persp(y = pd, x = t, z = z, theta = 0, phi = -9, ticktype = "detailed", expand = 0.5)
+
+
+#plotly::plot_ly
+
+#Interactivo, rotación libre.
+
+#plot3D::persp3D
+
+#x vec n, y vec m, z matrix mxn
+
+image(t, pd, z, xlab="p_death", ylab="t", main="Mean N(t) heatmap")
+contour(t, pd, z, add = TRUE, drawlabels = FALSE)
+
+
+```
+
+```{r}
+library(plotly)
+
+
+pd <- res$p_death                 # x = columnas
+t  <- 1:nrow(res$mean_N)          # y = filas
+z  <- res$mean_N                  # matriz filas × columnas
+
+plot_ly() |>
+  add_surface(
+    x = pd,     # eje X
+    y = t,      # eje Y
+    z = z       # matriz Z
+  ) |>
+  layout(
+    scene = list(
+      xaxis = list(title = "p_death"),
+      yaxis = list(title = "t"),
+      zaxis = list(title = "N promedio")
+    )
+  )
+
+
 ```
