@@ -102,6 +102,23 @@ plot(N, type="p",
        xlab="Tiempo", ylab="Población N(t)",
        main="ABM - Crecimiento Logístico")
 
+#graficar solucion de la edo y comparar con el modelo interpolado
+t<- c(1:60)
+ajuste <- loess(N ~ t, span = 0.2)
+N_suavizado <- predict(ajuste)
+plot(N_suavizado, type="p", 
+       xlab="Tiempo", ylab="Población N(t)",
+       main="ABM - Crecimiento Logístico")
+
+
+solucion_edo <- function(t, K, N0, r) {
+  (K*N0*exp(r*t))/ (K + N0*(exp(r*t) - 1))
+}
+
+tiempos<- seq(0,60, by=1)
+sols <- solucion_edo(tiempos, 100, 1, 0.5)
+lines(tiempos, sols, type = "l")
+
 
 #PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
 
