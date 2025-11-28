@@ -12,13 +12,27 @@ dN/dt = rN\[(K − N)/K\]
 
 r = b-d o r = (b − d) + (i − e)
 
+#arranca optima // abundancia de recursos
+
+N \<- ABM(100, 60, 0.3, 0.8)
+
+plot(N\$N, type="p",
+
+xlab="Tiempo", ylab="Población N(t)",
+
+main="ABM - Crecimiento Logístico")
+
+points((N\$p_birth_eff)\*100, col= "red")
+
+N\$p_birth_eff
+
 ```{r}
 
 
 #K --> capacidad de carga
 #N --> cantidad de individuos // varia con el tiempo
-#years --> numero de iteraciones OJO 
-#Fijamos una tasa de muerte y natalidad ?.?
+#iter --> numero de iteraciones // pasos de tiempo
+#p_birth y p_death probabilidad inicial de reproduccion y muerte
 
 
 ABM <- function(K, iter, p_death, p_birth) {
@@ -38,6 +52,8 @@ ABM <- function(K, iter, p_death, p_birth) {
   
   #Lo que se busca monitonear es la cantidad de agentes en el tiempo
   N <- c() #crecieminto dinamico
+  p_b <- c()
+
   
   
   #ahora si
@@ -73,6 +89,7 @@ ABM <- function(K, iter, p_death, p_birth) {
   #Actualizar la cantidad de agentes
     
     N <- c(N, sum(habitat == 1))
+    p_b <- c(p_b, p_birth_K)
   
     
 
@@ -84,27 +101,36 @@ ABM <- function(K, iter, p_death, p_birth) {
 
 
 }
-  
-#intento de vizualizacion
-  
 
-  
-return(N)
+
+return(list( N = N,
+             p_birth_eff = p_b))  
   
 }
 
 
+#PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
+
+```
+
+```{r}
 #arranca optima // abundancia de recursos 
 N <- ABM(100, 60, 0.3, 0.8)
+#Probar 01 y 09
 
 
-plot(N, type="p", 
+plot(N$N, type="p", 
        xlab="Tiempo", ylab="Población N(t)",
        main="ABM - Crecimiento Logístico")
+points((N$p_birth_eff)*100, col= "red")
 
+
+```
+
+```{r}
 #graficar solucion de la edo y comparar con el modelo interpolado
 t<- c(1:60)
-ajuste <- loess(N ~ t, span = 0.2)
+ajuste <- loess(N$N ~ t, span = 0.2)
 N_suavizado <- predict(ajuste)
 plot(N_suavizado, type="p", 
        xlab="Tiempo", ylab="Población N(t)",
@@ -120,6 +146,7 @@ sols <- solucion_edo(tiempos, 100, 1, 0.5)
 lines(tiempos, sols, type = "l")
 
 
+
 #PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
 
 simulacion_n <- function(n){
@@ -132,214 +159,10 @@ simulacion_n <- function(n){
 }
 
 simulacion_n(5)
-```
-
-```{r}
-
-#EXTENDER EL MODELO AGREGANDO SEXO BIOLOGICO
-ABM_ext1 <- function(K, iter, p_death, p_birth) {
-  
-  #Inicializar el ABM
-  #Creacion del ambiente
-  
-  habSize <- ceiling(sqrt(K)) #quemos una grilla LxL que pueda ocupar K individuos
-  L <- habSize^2
-  habitat <- rep(0, L) #habitad vacia
-  
-  #Cantidad inicial de agentes (1%)
-  N0 <- round(0.05 * K) #incorporar como parametro? 
-  
-  #PARA EVITAR EXTINCION SUBITA > 5%
-  
-  #Posicionar de forma aleatoria
-  habitat[sample(1:L, N0)] <- 1 #1 = lleno
-  
-  #Lo que se busca monitonear es la cantidad de agentes en el tiempo
-  N <- c() #crecieminto dinamico
-  
-  #INICIALIZAR LA EXTENCION
-  bio_sex <- rep(NA, L)
-  bio_sex[which(habitat ==1)] <- rbinom(N0, 1, 0.5)
-  #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con 50% de prob
-  
-  #ahora si
-  
-  for(t in 1:iter){
-    
-    vivos <- which(habitat == 1) #recuperar los ind donde el hab esta ocupado
-    
-    #MUERTES: a cada agente vivo se le asigna una probabilidad a partir de una unif(0,1). Si p < p_death --> r.i.p
-    
-    for(agente in vivos){
-      if( runif(1) < p_death){
-        habitat[agente] <- 0
-        bio_sex[agente] <- NA
-      }
-    }
-    
-    #NACIMIENTOS 
-    #para simular el compartamiento logistico es necesario que la p_birth sea controlada por la carga del ambiente
-    
-    n <- sum(habitat == 1) #sumamos los vivos
-    p_birth_K <- p_birth*(1 - n / K) #por la limitaciones de la carga, a medida que aumenta N, disminuye la prob de nacer
-    
-    
-    for(agent in vivos){
-      if(!is.na(bio_sex[agent]) & bio_sex[agent] == 1) {
-        if (runif(1) < p_birth_K){
-          libres <- which(habitat == 0) #ind de espacios libres en la grilla
-          if(length(libres) > 0){ 
-          i <- sample(libres, 1)
-          habitat[i]  <- 1 #elijo un ind aleatorio para colocar
-          bio_sex[i] <- rbinom(1, 1, 0.5)
-          }
-        }
-      }
-    }
-    
-  #Actualizar la cantidad de agentes
-    
-    N <- c(N, sum(habitat == 1))
-    
-    plot_grid <- rep(0, L)
-    plot_grid[which(habitat == 1 & bio_sex == 0)] <- 1
-    plot_grid[which(habitat == 1 & bio_sex == 1)] <- 2
-    
-    
-    if(t %in% seq(1, iter - iter/2, by = 5)){
-        
-      habCuadrado <- matrix(plot_grid, nrow=habSize, byrow=TRUE)
-      image(habCuadrado, col = c("white", "pink", "purple"), axes = FALSE, asp = 1)
-      #title(main = paste("Iteración", t, " - N =", N[length(N)]))
-    }
-  
-}
-  
-#intento de vizualizacion
-  
-
-  
-return(N)
-  
-}
-
-
-N <- ABM_ext(1000, 60, 0.3, 0.9)
-
-
-plot(N, type="l", 
-       xlab="Tiempo", ylab="Población N(t)",
-       main="ABM - Crecimiento Logístico")
-
-
-#1000 03 - 09 extincion
-
 
 ```
 
-EXTENCION EDAD
-
-```{r}
-
-ABM_ext2 <- function(K, iter, p_death, p_birth, r = 1) {
-  
-  #Inicializar el ABM
-  #Creacion del ambiente
-  
-  habSize <- ceiling(sqrt(K)) #quemos una grilla LxL que pueda ocupar K individuos
-  L <- habSize^2
-  habitat <- rep(0, L) #habitad vacia
-  
-  #Cantidad inicial de agentes (1%)
-  N0 <- round(0.01 * K) #incorporar como parametro? 
-  
-  #Posicionar de forma aleatoria
-  habitat[sample(1:L, N0)] <- 1 #1 = lleno
-  
-  #Lo que se busca monitonear es la cantidad de agentes en el tiempo
-  N <- c() #crecieminto dinamico
-  
-  edad <- rep(0, L) 
-  #los N0 arrancan tambien con edad cero "recien colocado", se podria asignar una edad aleatroia
-  #la edad maxima es la cantidad de iteraciones / lapso max de tiempo
-  
-  #ahora si
-  
-  for(t in 1:iter){
-    
-    vivos <- which(habitat == 1) #recuperar los ind donde el hab esta ocupado
-    
-    #ENVEJECER 
-    edad[vivos] <- edad[vivos] + 1
-    
-    
-    #MUERTES: a cada agente vivo se le asigna una probabilidad a partir de una unif(0,1). Si p < p_death --> r.i.p
-    
-    
-    for(agente in vivos){
-      
-       #riesgo: p_death base * (1 + a * edad / edad_max) // edad_max = iter
-      p_death_eff <- p_death * (1 + r * (edad[agente] / iter))
-      p_death_eff <- min(p_death_eff, 1)  # evitar >1
-      
-      if( runif(1) < p_death_eff){
-        habitat[agente] <- 0
-        edad[agente] <- 0
-      }
-    }
-    
-    #NACIMIENTOS 
-    #para simular el compartamiento logistico es necesario que la p_birth sea controlada por la carga del ambiente
-    
-    n <- sum(habitat == 1) #sumamos los vivos
-    p_birth_K <- p_birth*(1 - n / K) #por la limitaciones de la carga, a medida que aumenta N, disminuye la prob de nacer
-    
-    
-    for(agent in vivos){
-      if (runif(1) < p_birth_K){
-        libres <- which(habitat == 0) #ind de espacios libres en la grilla
-        if(length(libres) > 0){ 
-          i <- sample(libres, 1)
-          habitat[i]  <- 1 #elijo un ind aleatorio para colocar
-          edad[i] <- 0
-        }
-      }
-    }
-    
-  #Actualizar la cantidad de agentes
-    
-    N <- c(N, sum(habitat == 1))
-  
-    
-
-
-    if(t %in% seq(1, iter - iter/2, by = 5)){
-       habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
-       image(habCuadrado, col = c("white","black"), axes = FALSE, asp = 1)
-    }
-
-
-}
-  
-#intento de vizualizacion
-  
-
-  
-return(N)
-  
-}
-
-N <- ABM_ext2(100, 60, 0.3, 0.8)
-
-
-plot(N, type="p", 
-       xlab="Tiempo", ylab="Población N(t)",
-       main="ABM - Crecimiento Logístico")
-
-
-
-
-```
+EXTENCION
 
 ```{r}
 
@@ -349,13 +172,19 @@ ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
   habSize <- ceiling(sqrt(K))
   L <- habSize^2
   habitat <- rep(0, L)
-  N0 <- round(0.05 * K) 
+  
+  N0 <- round(0.05 * K) #Para evitar extincion subito inicamos con mas agentes
   
   
   habitat[sample(1:L, N0)] <- 1 
   N <- c() 
+  
+  #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con 50% de prob
   bio_sex <- rep(NA, L)
   bio_sex[which(habitat ==1)] <- rbinom(N0, 1, 0.5)
+  
+  #los N0 arrancan tambien con edad cero "recien colocado", se podria asignar una edad aleatroia
+  #la edad maxima es la cantidad de iteraciones / lapso max de tiempo
   edad <- rep(0, L) 
   
   for(t in 1:iter){
@@ -368,9 +197,9 @@ ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
     #MUERTE
     
     for(agente in vivos){
-      
+       #riesgo: p_death base * (1 + a * edad / edad_max) // edad_max = iter
       p_death_eff <- p_death * (1 + r * (edad[agente] / iter))
-      p_death_eff <- min(p_death_eff, 1)  
+      p_death_eff <- min(p_death_eff, 1)  # evitar >1
       
       if( runif(1) < p_death){
         habitat[agente] <- 0
@@ -425,13 +254,17 @@ return(N)
 }
 
 
-N <- ABM_ext3(1000, 60, 0.1, 0.9)
+N <- ABM_ext3(500, 60, 0.1, 0.9)
 
 
-plot(N, type="l", 
+plot(N, type="p", 
        xlab="Tiempo", ylab="Población N(t)",
        main="ABM - Crecimiento Logístico")
 
+
+#HACER SEXO FIGURA Y EDAD GRADIENTE 
+#PARALELIZAR LA SENSIBILIDAD
+#PASAR A 2D CON COLOR! INCLUIR IC 
 
 ```
 
@@ -443,8 +276,10 @@ Barrido con p_death variable y p_birth fijo (0.9)
 
 set.seed(1234)
 
-sensibilidad <- function(K = 1000, iter = 100, p_birth = 0.9, reps = 50){
-  
+#arrancar con 10
+
+sensibilidad <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50){
+  t_inicial <- Sys.time()
   p_death <- seq(0, 0.5, by = 0.05)
   p_len <- length(p_death) #cauntos valores distintos de p
   
@@ -488,17 +323,149 @@ sensibilidad <- function(K = 1000, iter = 100, p_birth = 0.9, reps = 50){
        mean_N = mean_N,
        var_N = var_N,
        extincion_prob = extincion,
-       t_hasta_ext_prom = t_hasta_ext_prom)
+       t_hasta_ext_prom = t_hasta_ext_prom,
+       t_ej = (t_inicial - Sys.time()))
  
 }
 
 res <- sensibilidad()
 
+#dos dimension con IC!!! buscar formato 
+#cortar en un tiempo // la banda!! 
+#HACER ZOOM EN 2-3 
+
+res$t_ej
+
 
 ```
 
+PARALELIZAR
+
 ```{r}
+
+library(parallel)
+
+sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50, 
+                       p_death = seq(0, 0.5, by = 0.01)) {
+  
+  t0 <- Sys.time()
+  p_len <- length(p_death)
+  
+  cores <- detectCores() - 1
+  cl <- makeCluster(cores)
+  
+  # Exportar funciones necesarias
+  clusterExport(cl, 
+                varlist = c("ABM_ext3"),
+                envir = .GlobalEnv)
+  #clusterSetRNGStream(cl, iseed = seed)
+  
+  
+  # Objetos salida
+  mean_N <- matrix(0, nrow = iter, ncol = p_len) 
+  #Para graficar usar promedio por punto
+  var_N  <- matrix(0, nrow = iter, ncol = p_len)
+  extincion <- numeric(p_len)
+  t_hasta_ext_prom <- numeric(p_len)
+  
+  for (i in 1:p_len) {
+    pd <- p_death[i]
+    
+    # Ejecutar reps en paralelo
+    runs_list <- parLapply(cl, 1:reps, function(r) {
+      ABM_ext3(K = K, iter = iter, p_death = pd, p_birth = p_birth)
+    })
+    
+    # Pasar lista a matriz reps × iter
+    runs <- do.call(rbind, runs_list)
+    
+    # Estadísticas
+    mean_N[ ,i] <- colMeans(runs)
+    var_N[ ,i]  <- apply(runs, 2, var)
+    
+    # Extinción
+    t_ext <- apply(runs, 1, function(x) {
+      if(any(x == 0)) which(x == 0)[1] else Inf
+    })
+    
+    extincion[i] <- mean(t_ext < Inf)
+    t_hasta_ext_prom[i] <- ifelse(any(t_ext < Inf),
+                                  mean(t_ext[t_ext < Inf]),
+                                  NA)
+  }
+  
+  stopCluster(cl)
+  
+  list(p_death = p_death,
+       mean_N = mean_N,
+       var_N = var_N,
+       extincion_prob = extincion,
+       t_hasta_ext_prom = t_hasta_ext_prom,
+       t_eje = (t_inicial - Sys.time()))
+}
+
+res1<- sens_paral()
+
+
+res1$t_eje
+
+res1$mean_N[, 3]
+hist(res1$mean_N[, 3])
+
+#MEJOR PARA MAS REPS
+```
+
+```{r, warning=FALSE}
+
+
+#Visualizacion
+library(tidyverse)
+
+#Mean_N es una matriz --> pasar a formato long
+
+df_long <- data.frame(
+  time = rep(1:nrow(res$mean_N), times = length(res$p_death)),
+  p_death = rep(res$p_death, each = nrow(res$mean_N)),
+  mean = as.vector(res$mean_N),
+  var = as.vector(res$var_N)
+)
+
+# IC del 95% # n = reps = 50
+df_long <- df_long |> 
+  mutate(
+    sd = sqrt(var),
+    se = sd / sqrt(50), #error standar                    
+    IC_l = mean - 1.96*se,
+    IC_u  = mean + 1.96*se
+  )
+
+
+ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death))) +
+  geom_line(size = 1) +
+  labs(color = "p_death",
+       x = "Tiempo",
+       y = "Población promedio",
+       title = "Crecimiento poblacional para distintos p_death") +
+  theme_minimal()
 #INTENTAR GRAFICAR CURVA 3D
+
+
+ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death), fill = as.factor(p_death))) +
+  geom_line(size = 0.5) +
+  geom_ribbon(aes(ymin = IC_l, ymax = IC_u), alpha = 0.15, color = NA) +
+  labs(color = "p_death", fill = "p_death",
+       x = "Tiempo",
+       y = "Población promedio ± IC95%",
+       title = "Curvas con intervalos de confianza") +
+  theme_minimal()
+
+
+
+#suavizar con loess
+```
+
+```{r}
+
 
 
 pd <- res$p_death #cols x
@@ -506,6 +473,9 @@ t <- 1:nrow(res$mean_N) #filas y
 z <- res$mean_N
 
 persp(y = pd, x = t, z = z, theta = 0, phi = -9, ticktype = "detailed", expand = 0.5)
+
+
+
 
 
 #plotly::plot_ly
@@ -518,7 +488,6 @@ persp(y = pd, x = t, z = z, theta = 0, phi = -9, ticktype = "detailed", expand =
 
 image(t, pd, z, xlab="p_death", ylab="t", main="Mean N(t) heatmap")
 contour(t, pd, z, add = TRUE, drawlabels = FALSE)
-
 
 ```
 
@@ -543,6 +512,16 @@ plot_ly() |>
       zaxis = list(title = "N promedio")
     )
   )
+
+
+```
+
+```{r}
+#Graficar el p_birth_eff, p_death_eff
+#SENSIBILIDAD MULTIVARIADA CON CORTE TRANSVERSAL
+#OJO CON LAS REPS
+
+
 
 
 ```
