@@ -122,6 +122,16 @@ lines(tiempos, sols, type = "l")
 
 #PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
 
+simulacion_n <- function(n){
+  sims <- matrix(NA, nrow = n, ncol = 60)
+  for (i in 1:n) {
+    N <- ABM(100, 60, 0.3, 0.8)
+    sims [i, ] <- N
+  }
+  return(sims)
+}
+
+simulacion_n(5)
 ```
 
 ```{r}
