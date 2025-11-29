@@ -147,19 +147,82 @@ lines(tiempos, sols, type = "l")
 
 
 
-#PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
+#simulaciones repetidas
+
+set.seed(1234)
 
 simulacion_n <- function(n){
   sims <- matrix(NA, nrow = n, ncol = 60)
   for (i in 1:n) {
-    N <- ABM(100, 60, 0.3, 0.8)
-    sims [i, ] <- N
+    res <- ABM(100, 60, 0.3, 0.8)
+    sims [i, ] <- res$N
   }
   return(sims)
 }
 
-simulacion_n(5)
+sim <- simulacion_n(30)
 
+#grafico de simulaciones
+
+plot(sim[1,], col="blue")
+points(sim[2,], col="red")
+points(sim[3,], col="yellow")
+points(sim[4,], col="green")
+points(sim[5,], col="violet")
+points(sim[6,], col="blue")
+points(sim[7,], col="red")
+points(sim[8,], col="yellow")
+points(sim[9,], col="green")
+points(sim[10,], col="violet")
+
+#interpolacion
+interpolar_sims <- function(sims) {
+  n <- nrow(sims)
+  t <- 1:ncol(sims)
+  interpolated <- matrix(NA, nrow = n, ncol = 200)
+  for (i in 1:n) {
+    new_points<- spline(t, sims[i,], 200)
+    interpolated [i,] <- new_points$y
+  }
+  return(interpolated)
+}
+
+sim_splines <- interpolar_sims(sim)
+
+#grafico de interpolados
+plot(sim_splines[1,], col="blue", pch=18)
+points(sim_splines[2,], col="red", pch=18)
+points(sim_splines[3,], col="yellow",pch=18)
+points(sim_splines[4,], col="green", pch=18)
+points(sim_splines[5,], col="violet", pch=18)
+points(sim_splines[6,], col="blue", pch=18)
+points(sim_splines[7,], col="red",pch=18)
+points(sim_splines[8,], col="yellow", pch=18)
+points(sim_splines[9,], col="green", pch=18)
+points(sim_splines[10,], col="violet", pch=18)
+
+#coeficientes de los splines
+coef_splines <- function(sims) {
+  n <- nrow(sims)
+  t <- 1:ncol(sims)
+  interpolated <- vector("list", n)
+  poly_spline <- vector("list", n)
+  coefs <- vector("list", n)
+  
+  for (i in 1:n) {
+    interpolated[[i]] <- interpSpline(t, sims[i,]) # spline cúbica en base B
+    coefs[[i]] <- coef(interpolated[[i]]) # coeficientes a, b, c, d
+  }
+  
+  return(coefs)
+}
+
+coeficientes <- coef_splines(sim)
+coeficientes[1]
+
+plot(coeficientes_5[[2]][,2])
+points(coeficientes_5[[2]][,3], pch=21, bg = "red")
+#points(coeficientes_5[[2]][,4], pch=21, bg = "blue")
 ```
 
 EXTENCION
