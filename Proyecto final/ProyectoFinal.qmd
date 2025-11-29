@@ -4,20 +4,27 @@ format: html
 editor: visual
 ---
 
-## Quarto
+## Proyecto Final - IEC 2025
 
-Simulacion de un modelo de crecimiento logistico mediante ABM
+# *Simulación de un modelo de crecimiento logístico mediante ABM*
+
+## ABM - Base
+
+```{r, warning=FALSE, message=FALSE}
+#librerias
+library(tidyverse)
+library(parallel)
+library(viridis)
+set.seed(1234)
+```
 
 ```{r}
 
-
-#K --> capacidad de carga
-#N --> cantidad de individuos // varia con el tiempo
+ABM_base <- function(K, iter, p_death, p_birth, plot = FALSE) {
+#K --> capacidad de carga del ambiente 
 #iter --> numero de iteraciones // pasos de tiempo
-#p_birth y p_death probabilidad inicial de reproduccion y muerte
-
-
-ABM <- function(K, iter, p_death, p_birth) {
+#p_birth y p_death probabilidad inicial de reproduccion y muerte 
+#N --> cantidad de individuos (variable de salida)
   
   #Inicializar el ABM
   #Creacion del ambiente
@@ -27,24 +34,23 @@ ABM <- function(K, iter, p_death, p_birth) {
   habitat <- rep(0, L) #habitad vacia
   
   #Cantidad inicial de agentes (1%)
-  N0 <- round(0.01 * K) #incorporar como parametro? 
+  N0 <- round(0.01 * K) #se podria incorporar como parametro
   
   #Posicionar de forma aleatoria
   habitat[sample(1:L, N0)] <- 1 #1 = lleno
   
   #Lo que se busca monitonear es la cantidad de agentes en el tiempo
   N <- c() #crecieminto dinamico
-  p_b <- c()
+  p_b <- c() #registrar variacion de la p_birth efectiva
 
-  
   
   #ahora si
   
   for(t in 1:iter){
     
-    vivos <- which(habitat == 1) #recuperar los ind donde el hab esta ocupado
+    vivos <- which(habitat == 1) #recuperar los indices donde el hab esta ocupado
     
-    #MUERTES: a cada agente vivo se le asigna una probabilidad a partir de una unif(0,1). Si p < p_death --> r.i.p
+    #MUERTES: a cada agente vivo se le asigna una probabilidad a partir de una unif(0,1). Si p < p_death --> r.i.p (equivalente a una ber(p))
     
     for(agente in vivos){
       if( runif(1) < p_death){
@@ -56,7 +62,7 @@ ABM <- function(K, iter, p_death, p_birth) {
     #para simular el compartamiento logistico es necesario que la p_birth sea controlada por la carga del ambiente
     
     n <- sum(habitat == 1) #sumamos los vivos
-    p_birth_K <- p_birth*(1 - n / K) #por la limitaciones de la carga, a medida que aumenta N, disminuye la prob de nacer
+    p_birth_K <- p_birth*(1 - n / K) #por la limitaciones de la carga, a medida que aumenta N, disminuye la prob de reproducirse
     
     
     for(agent in vivos){
@@ -73,70 +79,89 @@ ABM <- function(K, iter, p_death, p_birth) {
     N <- c(N, sum(habitat == 1))
     p_b <- c(p_b, p_birth_K)
   
-    
-
-
-    if(t %in% seq(1, iter - iter/2, by = 5)){
-       habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
-       image(habCuadrado, col = c("white","black"), axes = FALSE, asp = 1)
+    if(plot){ #graficar para cortes de tiempo // se ve como un QR:(
+      if(t %in% seq(1, iter - iter/2, by = 5)){
+         habCuadrado <- matrix(habitat, nrow=habSize, byrow=TRUE)
+         image(habCuadrado, col = c("white","black"), axes = FALSE, asp = 1)
+      }
     }
 
-
-}
-
+  }
+  
+df_N <- data.frame(N = N,
+                   p = p_b,
+                   t = 1:iter)
 
 return(list( N = N,
-             p_birth_eff = p_b))  
+             p_birth_eff = p_b,
+             df_N = df_N))  
   
 }
 
 
-#PROBAR ANIMAR / GIF O ELEGIR CORTES DE TIEMPO
 
 ```
 
 ```{r}
-#arranca optima // abundancia de recursos 
-N <- ABM(100, 60, 0.3, 0.8)
-#Probar 01 y 09
 
+ABM_1 <- ABM_base(100, 60, 0.1, 0.9)
+#los parametros que contralan la mortalidad y la natalidad los inicializamos de forma optima, dado que van a ir "empeorando" con el tiempo
+ABM_2 <- ABM_base(100, 60, 0.3, 0.8)
 
-plot(N$N, type="p", 
-       xlab="Tiempo", ylab="Población N(t)",
-       main="ABM - Crecimiento Logístico")
-points((N$p_birth_eff)*100, col= "red")
+df <- bind_rows(
+  ABM_1$df_N |>  mutate(simu = "pD=0.1, pB=0.9"),
+  ABM_2$df_N |>  mutate(simu = "pD=0.3, pB=0.8")
+)
+
+ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
+  geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
+             size = 0.8) +
+  labs(title = "ABM base - Evolucion de la poblacion", x = "Tiempo", 
+       y = "Población N(t)\n Probabilida de reproduccion (%)", 
+       color = "Parametros") +
+  scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
+  #scale_color_viridis(discrete = TRUE, option = "D") +
+  scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
+    name = "Variable") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        legend.position = "bottom")
+ 
 
 
 ```
 
+Solucion de la EDO
+
 ```{r}
-#graficar solucion de la edo y comparar con el modelo interpolado
-t<- c(1:60)
-ajuste <- loess(N$N ~ t, span = 0.2)
-N_suavizado <- predict(ajuste)
-plot(N_suavizado, type="p", 
+
+#Primero suavizamos con metodo LOESS
+t <- ABM_1$df_N$t
+ajuste <- loess(ABM_1$N ~ t, span = 0.2)
+ABM_1_suavizado <- predict(ajuste)
+
+#Plot pasico para registrar resultados
+plot(ABM_1_suavizado, type="p", 
        xlab="Tiempo", ylab="Población N(t)",
-       main="ABM - Crecimiento Logístico")
+       main="ABM Base")
 
-
-solucion_edo <- function(t, K, N0, r) {
+#La EDO tiene sol analitica
+sol_EDO <- function(t, K, N0, r) {
   (K*N0*exp(r*t))/ (K + N0*(exp(r*t) - 1))
 }
 
-tiempos<- seq(0,60, by=1)
-sols <- solucion_edo(tiempos, 100, 1, 0.5)
-lines(tiempos, sols, type = "l")
+sols <- sol_EDO(t, 100, 1, 0.8) #r = pB - pD
+lines(t, sols, type = "l")
 
+```
 
-
-#simulaciones repetidas
-
-set.seed(1234)
+```{r}
+#Para paremtros optimos realizamos n replicas
 
 simulacion_n <- function(n){
-  sims <- matrix(NA, nrow = n, ncol = 60)
+  sims <- matrix(NA, nrow = n, ncol = 60) #iter = 60
   for (i in 1:n) {
-    res <- ABM(100, 60, 0.3, 0.8)
+    res <- ABM_base(100, 60, 0.1, 0.9)
     sims [i, ] <- res$N
   }
   return(sims)
@@ -144,20 +169,7 @@ simulacion_n <- function(n){
 
 sim <- simulacion_n(30)
 
-#grafico de simulaciones
-
-plot(sim[1,], col="blue")
-points(sim[2,], col="red")
-points(sim[3,], col="yellow")
-points(sim[4,], col="green")
-points(sim[5,], col="violet")
-points(sim[6,], col="blue")
-points(sim[7,], col="red")
-points(sim[8,], col="yellow")
-points(sim[9,], col="green")
-points(sim[10,], col="violet")
-
-#interpolacion
+#INTERPOLACION
 interpolar_sims <- function(sims) {
   n <- nrow(sims)
   t <- 1:ncol(sims)
@@ -169,20 +181,64 @@ interpolar_sims <- function(sims) {
   return(interpolated)
 }
 
-sim_splines <- interpolar_sims(sim)
+```
 
-#grafico de interpolados
-plot(sim_splines[1,], col="blue", pch=18)
-points(sim_splines[2,], col="red", pch=18)
-points(sim_splines[3,], col="yellow",pch=18)
-points(sim_splines[4,], col="green", pch=18)
-points(sim_splines[5,], col="violet", pch=18)
-points(sim_splines[6,], col="blue", pch=18)
-points(sim_splines[7,], col="red",pch=18)
-points(sim_splines[8,], col="yellow", pch=18)
-points(sim_splines[9,], col="green", pch=18)
-points(sim_splines[10,], col="violet", pch=18)
+```{r}
 
+df_sim1 <- data.frame(
+  t = 1:length(sim[1, ]),
+  N = sim[1, ]
+)
+
+df_EDO <- data.frame(
+  t = t,
+  N_EDO = sols
+)
+
+sim_matrix <- sim_splines # matriz nSim x nPuntos (200)
+t200 <- seq(1, 60, length.out = 200)
+
+# Calcular percentiles
+ribbon_df <- data.frame(
+  t = t200,
+  ymin = apply(sim_splines, 2, quantile, probs = 0.1),
+  ymax = apply(sim_splines, 2, quantile, probs = 0.9)
+)
+
+df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |> 
+  mutate(sim = row_number()) |> 
+  pivot_longer(cols = -sim, names_to = "index", values_to = "N_interp") |> 
+  mutate(index = as.numeric(index),t = seq(1, 60, length.out = 200)[index])
+
+ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
+    aes(x = t, y = N, color = "ABM Base")) +
+           geom_line(data = df_spline |>  filter(sim == 1), size = 1,
+    aes(x = t, y = N_interp, color = "Interpolacion")) +
+  
+    scale_color_manual(values = viridis(20)[c(2, 13)],name = "") +
+    labs(title = "Simulación (1): Original vs Interpolacion", 
+          x = "Tiempo", y = "Población N(t)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+    legend.position = "bottom")
+
+ggplot() +
+  geom_ribbon(data = ribbon_df, aes(x = t, ymin = ymin, ymax = ymax),
+              fill = viridis(20)[20], alpha = 0.5) +
+  geom_line(data = df_spline, aes(x = t, y = N_interp, group = sim, color = sim),    alpha = 0.7) +
+  geom_line(data = df_EDO, aes(x = t, y = N_EDO),
+            color = "black", size = 0.7) +
+  
+  scale_color_viridis_c(end = 0.8) +
+  labs(title = "Todas las simulaciones interpoladas (spline)",
+       x = "Tiempo",y = "Población interpolada") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+    legend.position = "right")
+
+```
+
+```{r}
 #coeficientes de los splines
 coef_splines <- function(sims) {
   n <- nrow(sims)
@@ -207,28 +263,29 @@ points(coeficientes_5[[2]][,3], pch=21, bg = "red")
 #points(coeficientes_5[[2]][,4], pch=21, bg = "blue")
 ```
 
-EXTENCION
+## ABM - Extendido (edad y sexo biologico)
 
 ```{r}
-
-#EXTENDER EL MODELO AGREGANDO SEXO BIOLOGICO y EDAD
-ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
+ABM_ext <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
+  
+  timestamps <- c(1, 4, 7, 10, 13, 16, 19, 21, iter)
+  timestamps_plot <- list()
+  
   
   habSize <- ceiling(sqrt(K))
   L <- habSize^2
   habitat <- rep(0, L)
   
-  N0 <- round(0.05 * K) #Para evitar extincion subito inicamos con mas agentes
-  
+  N0 <- round(0.05 * K) #Para evitar extincion subita inicamos con mas agentes
   
   habitat[sample(1:L, N0)] <- 1 
   N <- c() 
   
-  #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con 50% de prob
+  #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con ber(0.5)
   bio_sex <- rep(NA, L)
   bio_sex[which(habitat ==1)] <- rbinom(N0, 1, 0.5)
   
-  #los N0 arrancan tambien con edad cero "recien colocado", se podria asignar una edad aleatroia
+  #los N0 arrancan tambien con edad cero "recien colocado"
   #la edad maxima es la cantidad de iteraciones / lapso max de tiempo
   edad <- rep(0, L) 
   
@@ -242,7 +299,7 @@ ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
     #MUERTE
     
     for(agente in vivos){
-       #riesgo: p_death base * (1 + a * edad / edad_max) // edad_max = iter
+       #riesgo: p_death base * (1 + r * edad / edad_max) // edad_max = iter
       p_death_eff <- p_death * (1 + r * (edad[agente] / iter))
       p_death_eff <- min(p_death_eff, 1)  # evitar >1
       
@@ -283,10 +340,10 @@ ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
     plot_grid[which(habitat == 1 & bio_sex == 1)] <- 2
     
     
-    if(t %in% seq(1, iter - iter/2, by = 5)){
+    if(t %in% timestamps){
         
       habCuadrado <- matrix(plot_grid, nrow=habSize, byrow=TRUE)
-      image(habCuadrado, col = c("white", "pink", "purple"), axes = FALSE, asp = 1)
+      timestamps_plot[[as.character(t)]] <- list(grid = habCuadrado)
       #title(main = paste("Iteración", t, " - N =", N[length(N)]))
     }
     
@@ -294,104 +351,55 @@ ABM_ext3 <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
   
 }
   
-return(N)
+return(list(N = N, plot = timestamps_plot))
   
 }
 
-
-N <- ABM_ext3(500, 60, 0.1, 0.9)
-
-
-plot(N, type="p", 
-       xlab="Tiempo", ylab="Población N(t)",
-       main="ABM - Crecimiento Logístico")
-
-
-#HACER SEXO FIGURA Y EDAD GRADIENTE 
-#PARALELIZAR LA SENSIBILIDAD
-#PASAR A 2D CON COLOR! INCLUIR IC 
-
 ```
-
-ANALISIS DE SENSIBILIDAD
-
-Barrido con p_death variable y p_birth fijo (0.9)
 
 ```{r}
+K <- 500
+ABM_3 <- ABM_ext(K, 60, 0.1, 0.9, plot = TRUE)
 
-set.seed(1234)
-
-#arrancar con 10
-
-sensibilidad <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50){
-  t_inicial <- Sys.time()
-  p_death <- seq(0, 0.5, by = 0.05)
-  p_len <- length(p_death) #cauntos valores distintos de p
+par(mfrow=c(3,3), mar=c(2,2,2,2))
+for(name in names(ABM_3$plot)){
   
-  #Monitorear
-  extincion <- numeric(p_len)
-  t_hasta_ext_prom <- numeric(p_len)
+  grid <- ABM_3$plot[[name]]$grid
   
-  #PARA LUEGO GRAFICAR NECESITAMOS PROMEDIAR LAS REPS
-  mean_N <- matrix(0, nrow = iter, ncol = p_len)
-  var_N <- matrix(0, nrow = iter, ncol = p_len)
+  image(grid[nrow(grid):1,], col=c("white", viridis(20)[2], viridis(20)[13]), 
+        axes=FALSE, asp = 1)
+  title(paste("t =", name))
   
+  # Calcular %
+  n_SM <- sum(grid == 1)
+  n_SF <- sum(grid == 2)
+  n_total <- n_SM + n_SF
+  ocupacion <- round(100 * n_total / K, 1)
+  prop_SM <- round(100 * n_SM / n_total, 1)
+  prop_SF <- round(100 * n_SF / n_total, 1)
   
-  for(i in 1:p_len) {
-    
-    pd <- p_death[i]
-    #guardar la serie de cada corrida
-    runs <- matrix(NA, nrow = reps, ncol = iter)
-    
-    t_ext <- rep(Inf, reps) #si no extincion t = Inf
-    
-    for(r in 1:reps){
-      N_t <- ABM_ext3(K, iter, pd, p_birth)
-      runs[r, ] <- N_t
-      
-       if(any(N_t == 0)) { #primer instante donde la poblacion = 0
-        t_ext[r] <- which(N_t == 0)[1]
-      }
-    }
-    
-     extincion[i] <- mean(t_ext < Inf)
-     t_hasta_ext_prom[i] <- ifelse(all(extincion[i] == 0), 
-                                  NA, 
-                                  mean(t_ext[t_ext < Inf]))
-     
-     mean_N[ ,i] <- colMeans(runs)
-     var_N[ ,i] <- apply(runs, 2, var)
-    
-  }
-  
-   list(p_death = p_death,
-       mean_N = mean_N,
-       var_N = var_N,
-       extincion_prob = extincion,
-       t_hasta_ext_prom = t_hasta_ext_prom,
-       t_ej = (t_inicial - Sys.time()))
- 
+    # Texto debajo en negrita
+  mtext(paste0("N/K: ", ocupacion, "% | SM: ", prop_SM,
+               "% | SF: ", prop_SF, "%"), side=1, line=0.5, cex=0.65, font=2)
+  legend("bottomright", legend=c("SM","SF"), 
+         fill= c(viridis(20)[2], viridis(20)[13]), bty="n", cex=0.8)
 }
 
-res <- sensibilidad()
-
-#dos dimension con IC!!! buscar formato 
-#cortar en un tiempo // la banda!! 
-#HACER ZOOM EN 2-3 
-
-res$t_ej
-
-
 ```
+
+```{r}
+#GRAFICAR CURVA
+```
+
+### Analisis de sensibilidad 
 
 PARALELIZAR
 
 ```{r}
-
-library(parallel)
-
+#Barrido con p_death variable y p_birth fijo (0.9)
+#arrancar con 10
 sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50, 
-                       p_death = seq(0, 0.5, by = 0.01)) {
+                       p_death = seq(0, 0.5, by = 0.05)) {
   
   t0 <- Sys.time()
   p_len <- length(p_death)
@@ -399,44 +407,41 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50,
   cores <- detectCores() - 1
   cl <- makeCluster(cores)
   
-  # Exportar funciones necesarias
-  clusterExport(cl, 
-                varlist = c("ABM_ext3"),
-                envir = .GlobalEnv)
+  #Exportar funciones necesarias
+  clusterExport(cl,varlist = c("ABM_ext"),envir = .GlobalEnv)
   #clusterSetRNGStream(cl, iseed = seed)
   
-  
-  # Objetos salida
-  mean_N <- matrix(0, nrow = iter, ncol = p_len) 
-  #Para graficar usar promedio por punto
-  var_N  <- matrix(0, nrow = iter, ncol = p_len)
+  #Monitorear
   extincion <- numeric(p_len)
   t_hasta_ext_prom <- numeric(p_len)
+  
+  #PARA LUEGO GRAFICAR NECESITAMOS PROMEDIAR LAS REPS (punto a punto)
+  mean_N <- matrix(0, nrow = iter, ncol = p_len)
+  var_N <- matrix(0, nrow = iter, ncol = p_len)
   
   for (i in 1:p_len) {
     pd <- p_death[i]
     
-    # Ejecutar reps en paralelo
+    #Ejecutar reps en paralelo
     runs_list <- parLapply(cl, 1:reps, function(r) {
-      ABM_ext3(K = K, iter = iter, p_death = pd, p_birth = p_birth)
+      ABM_ext(K = K, iter = iter, p_death = pd, p_birth = p_birth)$N
     })
     
-    # Pasar lista a matriz reps × iter
+    #Pasar lista a matriz reps × iter
     runs <- do.call(rbind, runs_list)
     
-    # Estadísticas
     mean_N[ ,i] <- colMeans(runs)
     var_N[ ,i]  <- apply(runs, 2, var)
     
-    # Extinción
+    #Extinción
     t_ext <- apply(runs, 1, function(x) {
       if(any(x == 0)) which(x == 0)[1] else Inf
     })
     
     extincion[i] <- mean(t_ext < Inf)
-    t_hasta_ext_prom[i] <- ifelse(any(t_ext < Inf),
-                                  mean(t_ext[t_ext < Inf]),
-                                  NA)
+    t_hasta_ext_prom[i] <- ifelse(all(extincion[i] == 0), 
+                                  NA, 
+                                  mean(t_ext[t_ext < Inf]))
   }
   
   stopCluster(cl)
@@ -446,34 +451,69 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50,
        var_N = var_N,
        extincion_prob = extincion,
        t_hasta_ext_prom = t_hasta_ext_prom,
-       t_eje = (t_inicial - Sys.time()))
+       t_eje = (t0 - Sys.time()))
 }
 
-res1<- sens_paral()
 
-
-res1$t_eje
-
-res1$mean_N[, 3]
-hist(res1$mean_N[, 3])
-
-#MEJOR PARA MAS REPS
 ```
 
 ```{r, warning=FALSE}
 
+res05 <- sens_paral()
+res01 <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
+```
 
-#Visualizacion
-library(tidyverse)
+```{r}
 
 #Mean_N es una matriz --> pasar a formato long
+df_long <- data.frame(
+  time = rep(1:nrow(res05$mean_N), times = length(res05$p_death)),
+  p_death = rep(res05$p_death, each = nrow(res05$mean_N)),
+  mean = as.vector(res05$mean_N),
+  var = as.vector(res05$var_N)
+)
 
 df_long <- data.frame(
-  time = rep(1:nrow(res$mean_N), times = length(res$p_death)),
-  p_death = rep(res$p_death, each = nrow(res$mean_N)),
-  mean = as.vector(res$mean_N),
-  var = as.vector(res$var_N)
+  time = rep(1:nrow(res01$mean_N), times = length(res01$p_death)),
+  p_death = rep(res01$p_death, each = nrow(res01$mean_N)),
+  mean = as.vector(res01$mean_N),
+  var = as.vector(res01$var_N)
 )
+
+
+ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
+  geom_line(size = 0.8) +
+  labs(color = "p_death",
+       x = "Tiempo",
+       y = "Población promedio",
+       title = "Crecimiento poblacional para distintos p_death") +
+  scale_color_viridis_c(option = "D") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        legend.position = "right")
+
+
+
+
+
+
+
+```
+
+```{r, warning=FALSE}
+
+#dos dimension con IC!!! buscar formato 
+#cortar en un tiempo // la banda!! 
+#HACER ZOOM EN 2-3 
+
+#plot(N, type="p", 
+#xlab="Tiempo", ylab="Población N(t)",
+#main="ABM - Crecimiento Logístico")
+#PASAR A 2D CON COLOR! INCLUIR IC 
+#Visualizacion
+
+
+#Mean_N es una matriz --> pasar a formato long
 
 # IC del 95% # n = reps = 50
 df_long <- df_long |> 
@@ -483,16 +523,6 @@ df_long <- df_long |>
     IC_l = mean - 1.96*se,
     IC_u  = mean + 1.96*se
   )
-
-
-ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death))) +
-  geom_line(size = 1) +
-  labs(color = "p_death",
-       x = "Tiempo",
-       y = "Población promedio",
-       title = "Crecimiento poblacional para distintos p_death") +
-  theme_minimal()
-#INTENTAR GRAFICAR CURVA 3D
 
 
 ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death), fill = as.factor(p_death))) +
@@ -507,58 +537,6 @@ ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death), fill = as.fa
 
 
 #suavizar con loess
-```
-
-```{r}
-
-
-
-pd <- res$p_death #cols x
-t <- 1:nrow(res$mean_N) #filas y
-z <- res$mean_N
-
-persp(y = pd, x = t, z = z, theta = 0, phi = -9, ticktype = "detailed", expand = 0.5)
-
-
-
-
-
-#plotly::plot_ly
-
-#Interactivo, rotación libre.
-
-#plot3D::persp3D
-
-#x vec n, y vec m, z matrix mxn
-
-image(t, pd, z, xlab="p_death", ylab="t", main="Mean N(t) heatmap")
-contour(t, pd, z, add = TRUE, drawlabels = FALSE)
-
-```
-
-```{r}
-library(plotly)
-
-
-pd <- res$p_death                 # x = columnas
-t  <- 1:nrow(res$mean_N)          # y = filas
-z  <- res$mean_N                  # matriz filas × columnas
-
-plot_ly() |>
-  add_surface(
-    x = pd,     # eje X
-    y = t,      # eje Y
-    z = z       # matriz Z
-  ) |>
-  layout(
-    scene = list(
-      xaxis = list(title = "p_death"),
-      yaxis = list(title = "t"),
-      zaxis = list(title = "N promedio")
-    )
-  )
-
-
 ```
 
 ```{r}
