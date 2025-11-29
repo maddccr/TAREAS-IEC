@@ -181,6 +181,8 @@ interpolar_sims <- function(sims) {
   return(interpolated)
 }
 
+sim_splines <- interpolar_sims(sim)
+
 ```
 
 ```{r}
@@ -393,11 +395,9 @@ for(name in names(ABM_3$plot)){
 
 ### Analisis de sensibilidad 
 
-PARALELIZAR
-
 ```{r}
 #Barrido con p_death variable y p_birth fijo (0.9)
-#arrancar con 10
+#codigo palelizado para mayor eficiencia
 sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50, 
                        p_death = seq(0, 0.5, by = 0.05)) {
   
@@ -459,27 +459,22 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50,
 
 ```{r, warning=FALSE}
 
-res05 <- sens_paral()
-res01 <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
+p_death_v<- c(seq(0, 0.25, by = 0.05), 
+              seq(0.26, 0.35, by = 0.005),
+              seq(0.36, 0.5, by =0.05))
+
+res <- sens_paral(p_death = p_death_v)
 ```
 
 ```{r}
 
 #Mean_N es una matriz --> pasar a formato long
 df_long <- data.frame(
-  time = rep(1:nrow(res05$mean_N), times = length(res05$p_death)),
-  p_death = rep(res05$p_death, each = nrow(res05$mean_N)),
-  mean = as.vector(res05$mean_N),
-  var = as.vector(res05$var_N)
+  time = rep(1:nrow(res$mean_N), times = length(res$p_death)),
+  p_death = rep(res$p_death, each = nrow(res$mean_N)),
+  mean = as.vector(res$mean_N),
+  var = as.vector(res$var_N)
 )
-
-df_long <- data.frame(
-  time = rep(1:nrow(res01$mean_N), times = length(res01$p_death)),
-  p_death = rep(res01$p_death, each = nrow(res01$mean_N)),
-  mean = as.vector(res01$mean_N),
-  var = as.vector(res01$var_N)
-)
-
 
 ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
   geom_line(size = 0.8) +
@@ -491,12 +486,6 @@ ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         legend.position = "right")
-
-
-
-
-
-
 
 ```
 
@@ -543,7 +532,7 @@ ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death), fill = as.fa
 #Graficar el p_birth_eff, p_death_eff
 #SENSIBILIDAD MULTIVARIADA CON CORTE TRANSVERSAL
 #OJO CON LAS REPS
-
+#convergencia reps
 
 
 
