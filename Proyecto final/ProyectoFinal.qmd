@@ -15,6 +15,7 @@ editor: visual
 library(tidyverse)
 library(parallel)
 library(viridis)
+library(splines)
 set.seed(1234)
 ```
 
@@ -258,11 +259,68 @@ coef_splines <- function(sims) {
 }
 
 coeficientes <- coef_splines(sim)
-coeficientes[1]
 
-plot(coeficientes_5[[2]][,2])
-points(coeficientes_5[[2]][,3], pch=21, bg = "red")
-#points(coeficientes_5[[2]][,4], pch=21, bg = "blue")
+#estudio de coefs
+#cada coeficiente por separado
+coefs_A <- function(coeficientes) {
+  n_sims <- length(coeficientes)
+  t <- nrow(coeficientes[[1]])
+  
+  coefs_mat <- matrix(NA, nrow = n_sims * t, ncol = 4)
+  
+  fila <- 1
+  
+  for (i in 1:n_sims) {
+    coef_i <- coeficientes[[i]]  # matriz 60 × 4
+    
+    coefs_mat[fila:(fila + t - 1), ] <- coef_i
+    
+    fila <- fila + t
+  }
+  
+  colnames(coefs_mat) <- c("a", "b", "c", "d")
+  
+  return(coefs_mat)
+}
+
+coef_globales <- coefs_A(coeficientes)
+summary(coef_globales)
+coef_glob_df <- as.data.frame(coef_globales)
+coef_long <- pivot_longer(coef_glob_df, cols = a:d, names_to = "coef", values_to = "valor")
+
+# Graficar con facet_wrap
+ggplot(coef_long, aes(x = valor)) +
+  geom_histogram(fill = "skyblue") +
+  facet_wrap(~coef, scales = "free") +
+  theme_minimal() +
+  labs(x = "Valor del coeficiente", y = "Frecuencia")
+
+#coeficientes por simulacion y relacion entre simulaciones
+coefs_B <-function(coeficientes) {
+  n_sims <- length(coeficientes)
+  coefs_mat <- matrix(NA, nrow = length(coeficientes), ncol = 4*60)
+  
+  for (i in 1:n_sims) {
+    coefs_i <- coeficientes[[i]]
+    coefs_mat[i,] <- as.vector(t(coefs_i))
+  }
+  return(coefs_mat)
+}
+
+
+coefs_por_sim <- coefs_B(coeficientes)
+coefs_por_sim_df <- as.data.frame(coefs_por_sim)
+
+distancias <- dist(coefs_por_sim) #entrada  (i,j) indica qué tan distinta es la simulación i de la j según sus 240 coeficientes del spline
+dist_vec <- as.numeric(distancias)
+df_dist <- data.frame(distancia = dist_vec)
+
+summary(dist_vec)
+
+ggplot(df_dist) +
+  geom_histogram(aes(x=distancia), bins = 30, fill="skyblue") +
+  labs(title = "Distancia entre simulaciones", x="Distancia euclidiana entre simulaciones" , y= "Distribucion")
+
 ```
 
 ## ABM - Extendido (edad y sexo biologico)
@@ -393,7 +451,7 @@ for(name in names(ABM_3$plot)){
 #GRAFICAR CURVA
 ```
 
-### Analisis de sensibilidad 
+### Analisis de sensibilidad
 
 ```{r}
 #Barrido con p_death variable y p_birth fijo (0.9)
