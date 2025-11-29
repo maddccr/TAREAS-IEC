@@ -8,24 +8,6 @@ editor: visual
 
 Simulacion de un modelo de crecimiento logistico mediante ABM
 
-dN/dt = rN\[(K − N)/K\]
-
-r = b-d o r = (b − d) + (i − e)
-
-#arranca optima // abundancia de recursos
-
-N \<- ABM(100, 60, 0.3, 0.8)
-
-plot(N\$N, type="p",
-
-xlab="Tiempo", ylab="Población N(t)",
-
-main="ABM - Crecimiento Logístico")
-
-points((N\$p_birth_eff)\*100, col= "red")
-
-N\$p_birth_eff
-
 ```{r}
 
 
