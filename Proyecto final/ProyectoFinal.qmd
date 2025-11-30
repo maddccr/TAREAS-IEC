@@ -98,9 +98,6 @@ return(list( N = N,
              df_N = df_N))  
   
 }
-
-
-
 ```
 
 ```{r}
@@ -128,31 +125,18 @@ ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         legend.position = "bottom")
  
-
-
 ```
 
 Solucion de la EDO
 
 ```{r}
-
-#Primero suavizamos con metodo LOESS
-t <- ABM_1$df_N$t
-ajuste <- loess(ABM_1$N ~ t, span = 0.2)
-ABM_1_suavizado <- predict(ajuste)
-
-#Plot pasico para registrar resultados
-plot(ABM_1_suavizado, type="p", 
-       xlab="Tiempo", ylab="Población N(t)",
-       main="ABM Base")
-
 #La EDO tiene sol analitica
 sol_EDO <- function(t, K, N0, r) {
   (K*N0*exp(r*t))/ (K + N0*(exp(r*t) - 1))
 }
 
 sols <- sol_EDO(t, 100, 1, 0.8) #r = pB - pD
-lines(t, sols, type = "l")
+#lines(t, sols, type = "l")
 
 ```
 
@@ -167,8 +151,50 @@ simulacion_n <- function(n){
   }
   return(sims)
 }
+```
 
-sim <- simulacion_n(30)
+```{r}
+#Necesitamos determinar el numero de replicas adecuado
+#Analisis de convergencia 
+
+set.seed(123)
+sims <- simulacion_n(200) 
+#Metrica: N final
+final_N <- sims[, 60] 
+running_mean <- cumsum(final_N)/(1:length(final_N))
+
+#Agregamos ademas medida de dispersion 
+running_var <- sapply(1:length(final_N), function(m){
+  var(final_N[1:m])/m
+})
+
+running_se <- sqrt(running_var)
+
+
+df_rm <- data.frame(
+  replicas = 1:length(running_mean),
+  mean = running_mean,
+  se = running_se)
+
+ggplot(df_rm, aes(x = replicas, y = mean)) +
+  geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se), 
+              alpha = 0.3, fill = viridis(20)[13]) +
+  geom_line(color = viridis(20)[2], size = 0.8) +
+  geom_hline(yintercept = mean(final_N), linetype = "dashed") +
+  labs(title = "Convergencia del N(t) final (running mean)",
+       x= "Número de réplicas",
+       y = "Promedio acumulado") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        legend.position = "bottom")
+
+
+```
+
+```{r}
+
+#Se estabiliza en n > 50
+sim <- simulacion_n(60)
 
 #INTERPOLACION
 interpolar_sims <- function(sims) {
@@ -183,7 +209,6 @@ interpolar_sims <- function(sims) {
 }
 
 sim_splines <- interpolar_sims(sim)
-
 ```
 
 ```{r}
@@ -201,11 +226,18 @@ df_EDO <- data.frame(
 sim_matrix <- sim_splines # matriz nSim x nPuntos (200)
 t200 <- seq(1, 60, length.out = 200)
 
-# Calcular percentiles
+
+nSim <- nrow(sim_splines)
+
+mean_interp <- apply(sim_splines, 2, mean)
+var_interp  <- apply(sim_splines, 2, var)
+se_interp   <- sqrt(var_interp / nSim)
+
+# Banda de confianza 95%
 ribbon_df <- data.frame(
-  t = t200,
-  ymin = apply(sim_splines, 2, quantile, probs = 0.1),
-  ymax = apply(sim_splines, 2, quantile, probs = 0.9)
+  t    = t200,
+  ymin = mean_interp - 1.96 * se_interp,
+  ymax = mean_interp + 1.96 * se_interp
 )
 
 df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |> 
@@ -213,22 +245,30 @@ df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |>
   pivot_longer(cols = -sim, names_to = "index", values_to = "N_interp") |> 
   mutate(index = as.numeric(index),t = seq(1, 60, length.out = 200)[index])
 
+
+
+#Para menos ruido grafico se eligen de forma aleatoria
+subset_idx <- sample(1:nrow(sim_splines), 12)
+df_spline_sub <- df_spline |> filter(sim %in% subset_idx)
+
 ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
     aes(x = t, y = N, color = "ABM Base")) +
+  
            geom_line(data = df_spline |>  filter(sim == 1), size = 1,
     aes(x = t, y = N_interp, color = "Interpolacion")) +
   
     scale_color_manual(values = viridis(20)[c(2, 13)],name = "") +
     labs(title = "Simulación (1): Original vs Interpolacion", 
           x = "Tiempo", y = "Población N(t)") +
-  theme_minimal() +
-  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+  
+    theme_minimal() +
+    theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
     legend.position = "bottom")
 
 ggplot() +
   geom_ribbon(data = ribbon_df, aes(x = t, ymin = ymin, ymax = ymax),
               fill = viridis(20)[20], alpha = 0.5) +
-  geom_line(data = df_spline, aes(x = t, y = N_interp, group = sim, color = sim),    alpha = 0.7) +
+  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim, color = sim),    alpha = 0.7) +
   geom_line(data = df_EDO, aes(x = t, y = N_EDO),
             color = "black", size = 0.7) +
   
@@ -238,6 +278,9 @@ ggplot() +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
     legend.position = "right")
+
+
+#alpha 0.08 color grey30 para graficar todas
 
 ```
 
@@ -278,7 +321,7 @@ coefs_A <- function(coeficientes) {
     fila <- fila + t
   }
   
-  colnames(coefs_mat) <- c("a", "b", "c", "d")
+  colnames(coefs_mat) <- c("A", "B", "C", "D")
   
   return(coefs_mat)
 }
@@ -286,14 +329,17 @@ coefs_A <- function(coeficientes) {
 coef_globales <- coefs_A(coeficientes)
 summary(coef_globales)
 coef_glob_df <- as.data.frame(coef_globales)
-coef_long <- pivot_longer(coef_glob_df, cols = a:d, names_to = "coef", values_to = "valor")
+coef_long <- pivot_longer(coef_glob_df, cols = A:D, names_to = "coef", values_to = "valor")
 
 # Graficar con facet_wrap
 ggplot(coef_long, aes(x = valor)) +
-  geom_histogram(fill = "skyblue") +
+  geom_histogram(fill = viridis(20)[13]) +
   facet_wrap(~coef, scales = "free") +
   theme_minimal() +
-  labs(x = "Valor del coeficiente", y = "Frecuencia")
+  labs(x = "Valor del coeficiente", y = "Frecuencia",
+       title = "Distribucion de los coeficiente de interpolacion") +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+    legend.position = "right")
 
 #coeficientes por simulacion y relacion entre simulaciones
 coefs_B <-function(coeficientes) {
@@ -317,8 +363,10 @@ df_dist <- data.frame(distancia = dist_vec)
 
 summary(dist_vec)
 
+#este no entiendo
+
 ggplot(df_dist) +
-  geom_histogram(aes(x=distancia), bins = 30, fill="skyblue") +
+  geom_histogram(aes(x=distancia), bins = 30, fill=viridis(20)[2]) +
   labs(title = "Distancia entre simulaciones", x="Distancia euclidiana entre simulaciones" , y= "Distribucion")
 
 ```
@@ -456,7 +504,7 @@ for(name in names(ABM_3$plot)){
 ```{r}
 #Barrido con p_death variable y p_birth fijo (0.9)
 #codigo palelizado para mayor eficiencia
-sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50, 
+sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 100, 
                        p_death = seq(0, 0.5, by = 0.05)) {
   
   t0 <- Sys.time()
@@ -467,6 +515,7 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50,
   
   #Exportar funciones necesarias
   clusterExport(cl,varlist = c("ABM_ext"),envir = .GlobalEnv)
+  clusterSetRNGStream(cl, 123)
   #clusterSetRNGStream(cl, iseed = seed)
   
   #Monitorear
@@ -515,13 +564,57 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 50,
 
 ```
 
+```{r}
+#Analisis de convergencia para ABM extendido
+
+simulacion_ext <- function(n){
+  sims <- matrix(NA, nrow = n, ncol = 60) #iter = 60
+  for (i in 1:n) {
+    res <- ABM_ext(500, 60, 0.1, 0.9)
+    sims [i, ] <- res$N
+  }
+  return(sims)
+}
+
+
+runs <- simulacion_ext(200)
+final_N <- runs[, 60] #metrica N(t) final
+
+
+#running_var <- cumsum((vals - running_mean)^2) / (1:length(vals))
+running_mean <- cumsum(final_N)/(1:length(final_N))
+
+running_var <- sapply(1:length(final_N), function(m){
+  var(final_N[1:m])/m
+})
+running_se <- sqrt(running_var)
+
+
+df_rm <- data.frame(
+  replicas = 1:length(running_mean),
+  mean = running_mean,
+  se = running_se)
+
+ggplot(df_rm, aes(x = replicas, y = mean)) +
+  geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se), 
+              alpha = 0.3, fill = viridis(20)[13]) +
+  geom_line(color = viridis(20)[2], size = 0.8) +
+  geom_hline(yintercept = mean(final_N), linetype = "dashed") +
+  labs(title = "Convergencia del N(t) final (running mean)",
+       x= "Número de réplicas",
+       y = "Promedio acumulado") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        legend.position = "bottom")
+
+
+```
+
 ```{r, warning=FALSE}
 
-p_death_v<- c(seq(0, 0.25, by = 0.05), 
-              seq(0.26, 0.35, by = 0.005),
-              seq(0.36, 0.5, by =0.05))
 
-res <- sens_paral(p_death = p_death_v)
+res <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
+
 ```
 
 ```{r}
@@ -531,66 +624,33 @@ df_long <- data.frame(
   time = rep(1:nrow(res$mean_N), times = length(res$p_death)),
   p_death = rep(res$p_death, each = nrow(res$mean_N)),
   mean = as.vector(res$mean_N),
-  var = as.vector(res$var_N)
+  var = as.vector(res$var_N),
+  se = sqrt(as.vector(res$var_N) / 100) #reps = 100
 )
 
+N0 <- round(0.05 * 500) 
+
 ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
+  geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se,
+                  fill = p_death), alpha = 0.15, color = NA) +
   geom_line(size = 0.8) +
+  geom_hline(yintercept = N0, linetype = "dashed", size = 1) +
   labs(color = "p_death",
        x = "Tiempo",
        y = "Población promedio",
        title = "Crecimiento poblacional para distintos p_death") +
   scale_color_viridis_c(option = "D") +
+  scale_fill_viridis_c() +
+  guides(fill = "none") +  
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         legend.position = "right")
 
 ```
 
-```{r, warning=FALSE}
-
-#dos dimension con IC!!! buscar formato 
-#cortar en un tiempo // la banda!! 
-#HACER ZOOM EN 2-3 
-
-#plot(N, type="p", 
-#xlab="Tiempo", ylab="Población N(t)",
-#main="ABM - Crecimiento Logístico")
-#PASAR A 2D CON COLOR! INCLUIR IC 
-#Visualizacion
-
-
-#Mean_N es una matriz --> pasar a formato long
-
-# IC del 95% # n = reps = 50
-df_long <- df_long |> 
-  mutate(
-    sd = sqrt(var),
-    se = sd / sqrt(50), #error standar                    
-    IC_l = mean - 1.96*se,
-    IC_u  = mean + 1.96*se
-  )
-
-
-ggplot(df_long, aes(x = time, y = mean, color = as.factor(p_death), fill = as.factor(p_death))) +
-  geom_line(size = 0.5) +
-  geom_ribbon(aes(ymin = IC_l, ymax = IC_u), alpha = 0.15, color = NA) +
-  labs(color = "p_death", fill = "p_death",
-       x = "Tiempo",
-       y = "Población promedio ± IC95%",
-       title = "Curvas con intervalos de confianza") +
-  theme_minimal()
-
-
-
-#suavizar con loess
-```
-
 ```{r}
-#Graficar el p_birth_eff, p_death_eff
 #SENSIBILIDAD MULTIVARIADA CON CORTE TRANSVERSAL
-#OJO CON LAS REPS
-#convergencia reps
+
 
 
 
