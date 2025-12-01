@@ -141,6 +141,11 @@ sols <- sol_EDO(t, 100, 1, 0.8) #r = pB - pD
 ```
 
 ```{r}
+
+
+```
+
+```{r}
 #Para paremtros optimos realizamos n replicas
 
 simulacion_n <- function(n){
