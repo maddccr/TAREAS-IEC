@@ -135,8 +135,17 @@ sol_EDO <- function(t, K, N0, r) {
   (K*N0*exp(r*t))/ (K + N0*(exp(r*t) - 1))
 }
 
-sols <- sol_EDO(t, 100, 1, 0.8) #r = pB - pD
+sols <-function(t, K, N0, r) {
+  soluciones <- c()
+  for (i in 1:t) {
+    soluciones <- c(soluciones, sol_EDO(i, K, N0, r))
+  }
+  return(soluciones)
+}
+
+soluciones <- sols(60, 100, 1, 0.8) #r = pB - pD
 #lines(t, sols, type = "l")
+
 
 ```
 
@@ -224,8 +233,8 @@ df_sim1 <- data.frame(
 )
 
 df_EDO <- data.frame(
-  t = t,
-  N_EDO = sols
+  t = 1:length(sim[1, ]),
+  N_EDO = soluciones
 )
 
 sim_matrix <- sim_splines # matriz nSim x nPuntos (200)
@@ -273,7 +282,7 @@ ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
 ggplot() +
   geom_ribbon(data = ribbon_df, aes(x = t, ymin = ymin, ymax = ymax),
               fill = viridis(20)[20], alpha = 0.5) +
-  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim, color = sim),    alpha = 0.7) +
+  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim), color=viridis(10)[5], alpha = 0.7) +
   geom_line(data = df_EDO, aes(x = t, y = N_EDO),
             color = "black", size = 0.7) +
   
@@ -308,7 +317,8 @@ coef_splines <- function(sims) {
 
 coeficientes <- coef_splines(sim)
 
-#estudio de coefs
+#estudio de coeficientes
+
 #cada coeficiente por separado
 coefs_A <- function(coeficientes) {
   n_sims <- length(coeficientes)
@@ -332,17 +342,22 @@ coefs_A <- function(coeficientes) {
 }
 
 coef_globales <- coefs_A(coeficientes)
+
 summary(coef_globales)
+sd_B <- sd(coef_globales[,2])
+sd_C <- sd(coef_globales[,3])
+
+# Graficarlos con facet_wrap
 coef_glob_df <- as.data.frame(coef_globales)
 coef_long <- pivot_longer(coef_glob_df, cols = A:D, names_to = "coef", values_to = "valor")
 
-# Graficar con facet_wrap
+
 ggplot(coef_long, aes(x = valor)) +
   geom_histogram(fill = viridis(20)[13]) +
   facet_wrap(~coef, scales = "free") +
   theme_minimal() +
   labs(x = "Valor del coeficiente", y = "Frecuencia",
-       title = "Distribucion de los coeficiente de interpolacion") +
+       title = "Distribucion de los coeficientes de interpolacion") +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
     legend.position = "right")
 
@@ -367,12 +382,18 @@ dist_vec <- as.numeric(distancias)
 df_dist <- data.frame(distancia = dist_vec)
 
 summary(dist_vec)
+sd(dist_vec)
+
+dist_norm <- (dist_vec - min(dist_vec)) / (max(dist_vec) - min(dist_vec))
+df_dist_norm <- data.frame(distancia = dist_norm)
+summary(dist_norm)
+sd(dist_norm)
 
 #este no entiendo
 
-ggplot(df_dist) +
+ggplot(df_dist_norm) +
   geom_histogram(aes(x=distancia), bins = 30, fill=viridis(20)[2]) +
-  labs(title = "Distancia entre simulaciones", x="Distancia euclidiana entre simulaciones" , y= "Distribucion")
+  labs(title = "Distancia entre simulaciones", x="Distancia" , y= "Distribucion")
 
 ```
 
