@@ -101,11 +101,15 @@ return(list( N = N,
 ```
 
 ```{r}
+K <- 100
+iter <- 50
+
 set.seed(1234)
-ABM_1 <- ABM_base(100, 60, 0.1, 0.9)
+ABM_1 <- ABM_base(K, iter, 0.1, 0.9)
 #los parametros que contralan la mortalidad y la natalidad los inicializamos de forma optima, dado que van a ir "empeorando" con el tiempo
 
-ABM_2 <- ABM_base(100, 60, 0.3, 0.8)
+set.seed(1234)
+ABM_2 <- ABM_base(K, iter, 0.3, 0.8)
 
 df <- bind_rows(
   ABM_1$df_N |>  mutate(simu = "pD=0.1, pB=0.9"),
@@ -115,7 +119,8 @@ df <- bind_rows(
 ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
   geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
              size = 0.8) +
-  labs(title = "ABM base - Evolución de la población", x = "Tiempo", 
+  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "(ABM base)",
+       x = "Tiempo", 
        y = "Población N(t)\n Probabilidad de reproducción (%)", 
        color = "Parámetros") +
   scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
@@ -124,11 +129,12 @@ ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
     name = "Variable") +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5),
         legend.position = "bottom")
  
 ```
 
-Solución de la EDO
+### Solución de la EDO
 
 ```{r}
 #La EDO tiene sol analitica
@@ -144,59 +150,100 @@ sols <-function(t, K, N0, r) {
   return(soluciones)
 }
 
-soluciones <- sols(60, 100, 1, 0.8) #r = pB - pD
+soluciones <- sols(iter, K, 1, 0.8) 
+#r = pB - pD
 #lines(t, sols, type = "l")
-
-
 ```
-
 
 ```{r}
 #Para paremtros optimos realizamos n replicas
 
 simulacion_n <- function(n){
-  sims <- matrix(NA, nrow = n, ncol = 60) #iter = 60
+  sims <- matrix(NA, nrow = n, ncol = iter) 
   for (i in 1:n) {
-    res <- ABM_base(100, 60, 0.1, 0.9)
+    res <- ABM_base(K, iter, 0.1, 0.9)
     sims [i, ] <- res$N
   }
   return(sims)
 }
 ```
 
+### Análisis de convergencia 
+
 ```{r}
 #Necesitamos determinar el numero de replicas adecuado
 #Analisis de convergencia 
 
-set.seed(123)
-sims <- simulacion_n(200) 
-#Metrica: N final
-final_N <- sims[, 60] 
-running_mean <- cumsum(final_N)/(1:length(final_N))
+analisis_conver <- function(sims){
+  #Metrica: N final
+final_N <- sims[, iter] 
+acum_mean <- cumsum(final_N)/(1:length(final_N))
 
-#Agregamos ademas medida de dispersion 
-running_var <- sapply(1:length(final_N), function(m){
+#Agregamos ademas medidas de dispersion 
+acum_var <- sapply(1:length(final_N), function(m){
   var(final_N[1:m])/m
 })
 
-running_se <- sqrt(running_var)
+acum_se <- sqrt(acum_var) #error estandar 
 
 
-df_rm <- data.frame(
-  replicas = 1:length(running_mean),
-  mean = running_mean,
-  se = running_se)
+df <- data.frame(
+  replicas = 1:length(acum_mean),
+  mean = acum_mean,
+  se = acum_se)
+  
+}
+```
 
-ggplot(df_rm, aes(x = replicas, y = mean)) +
-  geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se), 
-              alpha = 0.3, fill = viridis(20)[13]) +
-  geom_line(color = viridis(20)[2], size = 0.8) +
-  geom_hline(yintercept = mean(final_N), linetype = "dashed") +
-  labs(title = "Convergencia del N(t) final (running mean)",
+```{r, warning=FALSE}
+#Por sensibilidad del modelo a la incializacion de los numeros aleatorios comparamos dos semillas
+
+set.seed(1234)
+sims_1 <- simulacion_n(200) 
+df_1 <- analisis_conver(sims_1)
+df_1$sim <- "seed_1234"
+mu_1 <- mean(sims_1[, iter])
+
+set.seed(1)
+sims_2 <- simulacion_n(200) 
+df_2 <- analisis_conver(sims_2)
+df_2$sim <- "seed_1"
+mu_2 <- mean(sims_2[, iter])
+
+df_ambas <- rbind(df_1, df_2)
+
+
+ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
+  #"banda" de confianza asumiendo aproximacion normal 
+  geom_ribbon(aes(ymin = mean - 1.96*se, 
+                  ymax = mean + 1.96*se), 
+              alpha = 0.2, color = NA) +
+  
+  geom_line(size = 0.8) +
+  #promedio total
+  geom_hline(yintercept = mu_1, linetype = "dashed") +
+  geom_hline(yintercept = mu_2, linetype = "dashed") +
+  
+  geom_text(inherit.aes = FALSE, aes(x = -1, y = mu_1, label = round(mu_1, 1)),
+            vjust = -0.4, hjust = 1, size = 3, fontface = "plain",
+            alpha = 0.7) +
+  
+  scale_color_manual(values = c(viridis(20)[13], viridis(20)[2])) +
+  scale_fill_manual(values = c(viridis(20)[13], viridis(20)[2])) +
+  
+  scale_y_continuous(limits = c(0, 125)) +
+  
+  labs(title = "Convergencia del N(t) en el tiempo final para dos semillas",
+       subtitle = "(ABM base)",
        x= "Número de réplicas",
-       y = "Promedio acumulado") +
+       y = "Promedio acumulado",
+       color = "Semilla", fill = "Semilla",
+       caption = paste0("Promedio total seed_1: ", round(mu_1, 2),"     |     ",
+                        "Promedio total seed_1234: ", round(mu_2, 2))) +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5),
+        plot.caption = element_text(size = 8, hjust = 0.5, face = "italic"),
         legend.position = "bottom")
 
 
@@ -206,7 +253,7 @@ ggplot(df_rm, aes(x = replicas, y = mean)) +
 
 #Se estabiliza en n > 50
 set.seed(1234)
-sim <- simulacion_n(60)
+sims <- simulacion_n(60)
 
 #INTERPOLACION
 interpolar_sims <- function(sims) {
@@ -220,7 +267,7 @@ interpolar_sims <- function(sims) {
   return(interpolated)
 }
 
-sim_splines <- interpolar_sims(sim)
+sim_splines <- interpolar_sims(sims)
 ```
 
 ```{r}
