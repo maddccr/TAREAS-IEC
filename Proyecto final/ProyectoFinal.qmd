@@ -122,7 +122,7 @@ df <- bind_rows(
 ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
   geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
              size = 0.8) +
-  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "ABM base",
+  labs(title = "Evolución en el tiempo de la población y la probabilidad efectiva de reproducción", subtitle = "ABM base",
        x = "Tiempo", 
        y = "Población N(t)\n Probabilidad de reproducción (%)", 
        color = "Parámetros") +
@@ -601,17 +601,18 @@ df <- bind_rows(
   ABM_4$df_N |>  mutate(simu = "pD=0.3, pB=0.8")
 )
 
-ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
-  geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
-             size = 0.8) +
-  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "ABM extendido",
+ggplot(df) + geom_point(aes(x = t, y = N, color = simu)) +
+  #geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
+             #size = 0.8) +
+  labs(title = "Evolución en el tiempo de la población", 
+       subtitle = "ABM extendido",
        x = "Tiempo", 
-       y = "Población N(t)\n Probabilidad de reproducción (%)", 
+       y = "Población N(t)", 
        color = "Parámetros") +
   scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
   #scale_color_viridis(discrete = TRUE, option = "D") +
-  scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
-    name = "Variable") +
+  #scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
+    #name = "Variable") +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
@@ -658,7 +659,7 @@ p3 <- ggplot(df_3, aes(x = replicas, y = mean)) +
   #promedio total
   geom_hline(yintercept = mu_3, linetype = "dashed") +
 
-  labs(title = "Convergencia del N(t) en el tiempo final \n pD = 0.1 pB = 0.9",
+  labs(title = "Convergencia del N(t) en el tiempo final con pD = 0.1 pB = 0.9",
        subtitle = "ABM extendido",
        x= "Número de réplicas",
        y = "Promedio acumulado",
@@ -679,7 +680,7 @@ p4 <- ggplot(df_4, aes(x = replicas, y = mean)) +
   #promedio total
   geom_hline(yintercept = mu_4, linetype = "dashed") +
   
-  labs(title = "Convergencia del N(t) en el tiempo final \n pD = 0.3 pB = 0.9",
+  labs(title = "Convergencia del N(t) en el tiempo final con pD = 0.3 pB = 0.9",
        subtitle = "ABM extendido",
        x= "Número de réplicas",
        y = "Promedio acumulado",
@@ -760,7 +761,9 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 150,
 
 ```{r, warning=FALSE}
 #paciencia con este que tiene que hacer mucha cosa
-res <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
+p_death_vals <- seq(0.2, 0.35, by = 0.005)
+set.seed(1234)
+res <- sens_paral(p_death = p_death_vals, iter = iter)
 
 ```
 
@@ -772,26 +775,72 @@ df_long <- data.frame(
   p_death = rep(res$p_death, each = nrow(res$mean_N)),
   mean = as.vector(res$mean_N),
   var = as.vector(res$var_N),
-  se = sqrt(as.vector(res$var_N) / 100) #reps = 100
+  se = sqrt(as.vector(res$var_N) / 150) #reps = 150
 )
 
 N0 <- round(0.05 * 500) 
 
 ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
   geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se,
-                  fill = p_death), alpha = 0.15, color = NA) +
+                  fill = p_death), alpha = 0.2, color = NA) +
   geom_line(size = 0.8) +
-  geom_hline(yintercept = N0, linetype = "dashed", size = 1) +
-  labs(color = "p_death",
+  geom_hline(yintercept = N0, linetype = "dashed", size = 0.8) +
+  
+  #geom_text(inherit.aes = FALSE, aes(x = 1, y = N0, label = paste0("N0 = ", N0)),
+  #color = "black", hjust = -0.1,vjust = -0.5,size = 3) +
+  
+  annotate("text", x = -1, y = N0 - 20, label = paste0("N incial = ", N0),
+         color = "black", hjust = -0.1, vjust = -0.5, size = 3) +
+
+  labs(color = expression(italic("p_death")),
        x = "Tiempo",
        y = "Población N(t) promedio",
-       title = "Crecimiento poblacional para distintos p_death") +
+       title = "Evolución en el tiempo de N(t) para distintos valores de p_death",
+       subtitle = "ABM extendido") +
   scale_color_viridis_c(option = "D") +
   scale_fill_viridis_c() +
   guides(fill = "none") +  
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
         legend.position = "right")
+
+```
+
+```{r}
+df_EDO_long <- do.call(rbind, lapply(p_death_vals, function(pd) {
+  # aquí asumimos que el crecimiento r depende de pd si querés
+  r <- 0.9 - pd # ejemplo: r disminuye con p_death
+  N_EDO <- sols(iter, K, N0, r)
+  
+  data.frame(time = 1:iter, p_death = pd, N_EDO = N_EDO) }))
+
+
+ggplot(df_EDO_long, aes(x = time, y = N_EDO, color = p_death, group = p_death)) +
+
+  geom_line(size = 0.8) +
+  geom_hline(yintercept = N0, linetype = "dashed", size = 0.8) +
+  
+  #geom_text(inherit.aes = FALSE, aes(x = 1, y = N0, label = paste0("N0 = ", N0)),
+  #color = "black", hjust = -0.1,vjust = -0.5,size = 3) +
+  
+  annotate("text", x = 1, y = N0 - 20, label = paste0("N incial = ", N0),
+         color = "black", hjust = -0.1, vjust = -0.5, size = 3) +
+
+  labs(color = expression(italic("p_death")),
+       x = "Tiempo",
+       y = "Población N(t)",
+       title = "Solución de la EDO para distintos valores de p_death") +
+  scale_color_viridis_c(option = "D") +
+  scale_fill_viridis_c() +
+  coord_cartesian(xlim = c(0,25)) +
+  guides(fill = "none") +  
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
+        legend.position = "right")
+
+
 
 ```
 
