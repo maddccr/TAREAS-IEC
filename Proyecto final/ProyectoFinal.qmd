@@ -371,7 +371,7 @@ coeficientes <- coef_splines(sim)
 #estudio de coeficientes
 
 #cada coeficiente por separado
-coefs_A <- function(coeficientes) {
+coefs_total <- function(coeficientes) {
   n_sims <- length(coeficientes)
   t <- nrow(coeficientes[[1]])
   
@@ -392,7 +392,7 @@ coefs_A <- function(coeficientes) {
   return(coefs_mat)
 }
 
-coef_globales <- coefs_A(coeficientes)
+coef_globales <- coefs_total(coeficientes)
 
 summary(coef_globales)
 sd_B <- sd(coef_globales[,2])
@@ -412,45 +412,61 @@ ggplot(coef_long, aes(x = valor)) +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
     legend.position = "right")
 
-#coeficientes por simulacion y relacion entre simulaciones
-coefs_B <-function(coeficientes) {
-  n_sims <- length(coeficientes)
-  coefs_mat <- matrix(NA, nrow = length(coeficientes), ncol = 4*60)
+
+#extraer coeficientes 
+extraer_coef<-function(letra) {
   
-  for (i in 1:n_sims) {
-    coefs_i <- coeficientes[[i]]
-    coefs_mat[i,] <- as.vector(t(coefs_i))
-  }
-  return(coefs_mat)
+  t <- nrow(coeficientes[[1]])   # 50
+  n_sims <- length(coeficientes) # 60
+  # tomo la columna
+  vals <- coef_globales[, letra]
+  # convierto a matriz de 60 filas × 50 columnas
+  matriz <- matrix(vals, nrow = n_sims, ncol = t, byrow = TRUE)#lleno la mtriz fila por fila con valores de B de a 50
+  #nombres
+  colnames(matriz) <- paste0(letra, 1:t)
+  rownames(matriz) <- paste0("sim", 1:n_sims)
+  
+  return(matriz)
 }
 
+matrizA <- extraer_coef('A')
+matrizB <- extraer_coef('B')
 
-coefs_por_sim <- coefs_B(coeficientes)
-coefs_por_sim_df <- as.data.frame(coefs_por_sim)
+#paso a df
+matrizB_df <- data.frame(matrizB)
+matrizB_df <-mutate(matrizB_df, sim = rownames(matrizB_df))
 
-distancias <- dist(coefs_por_sim) #entrada  (i,j) indica qué tan distinta es la simulación i de la j según sus 240 coeficientes del spline
-dist_vec <- as.numeric(distancias) #paso el objeto dist a num
-df_dist <- data.frame(distancia = dist_vec) #df con todas las distsncias entre simulaciones
-dist_matrix <- as.matrix(distancias)
-which(dist_matrix == 718.30, arr.ind = TRUE)
+matrizA_df <- data.frame(matrizA)
+matrizA_df <-mutate(matrizA_df, sim = rownames(matrizA_df))
 
-summary(dist_vec)
-sd(dist_vec)
+#paso a long para geom_point
+matrizB_df_long <- pivot_longer( matrizB_df,
+    cols = starts_with("B"),
+    names_to = "coef_num",
+    values_to = "valor"
+  )
+matrizB_df_long <- mutate(matrizB_df_long, coef_num = as.numeric(str_remove(coef_num, "B")))
 
-dist_norm <- (dist_vec - min(dist_vec)) / (max(dist_vec) - min(dist_vec))
-df_dist_norm <- data.frame(distancia = dist_norm)
-summary(dist_norm)
-sd(dist_norm)
+matrizA_df_long <- pivot_longer( matrizA_df,
+    cols = starts_with("A"),
+    names_to = "coef_num",
+    values_to = "valor"
+  )
+matrizA_df_long <- mutate(matrizA_df_long, coef_num = as.numeric(str_remove(coef_num, "A")))
 
-#este no entiendo
+ggplot(matrizB_df_long, aes(x = coef_num, y = valor)) +
+  geom_point(alpha = 0.3, color=viridis(20)[13]) +
+  theme_minimal() +
+  labs(title = "Coeficientes B",
+       x = "Índice del coeficiente",
+       y = "Valor")
 
-ggplot(df_dist_norm) +
-  geom_histogram(aes(x=distancia), bins = 60, fill=viridis(20)[2], color = "black") +
-  labs(title = "Distancia entre simulaciones estandarizada", x="Distancia" , y= "Distribución")+
-  theme_minimal()
-
-#boxplot por posible presencia de outliers
-
+ggplot(matrizA_df_long, aes(x = coef_num, y = valor)) +
+  geom_point(alpha = 0.3, color=viridis(20)[13]) +
+  theme_minimal() +
+  labs(title = "Coeficientes A",
+       x = "Índice del coeficiente",
+       y = "Valor")
 ```
 
 ## ABM - Extendido (edad y sexo biológico)
