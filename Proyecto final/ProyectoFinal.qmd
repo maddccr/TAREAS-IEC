@@ -101,9 +101,10 @@ return(list( N = N,
 ```
 
 ```{r}
-
+set.seed(1234)
 ABM_1 <- ABM_base(100, 60, 0.1, 0.9)
 #los parametros que contralan la mortalidad y la natalidad los inicializamos de forma optima, dado que van a ir "empeorando" con el tiempo
+
 ABM_2 <- ABM_base(100, 60, 0.3, 0.8)
 
 df <- bind_rows(
@@ -114,9 +115,9 @@ df <- bind_rows(
 ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
   geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
              size = 0.8) +
-  labs(title = "ABM base - Evolucion de la poblacion", x = "Tiempo", 
-       y = "Población N(t)\n Probabilida de reproduccion (%)", 
-       color = "Parametros") +
+  labs(title = "ABM base - Evolución de la población", x = "Tiempo", 
+       y = "Población N(t)\n Probabilidad de reproducción (%)", 
+       color = "Parámetros") +
   scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
   #scale_color_viridis(discrete = TRUE, option = "D") +
   scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
@@ -127,7 +128,7 @@ ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
  
 ```
 
-Solucion de la EDO
+Solución de la EDO
 
 ```{r}
 #La EDO tiene sol analitica
@@ -150,7 +151,7 @@ soluciones <- sols(60, 100, 1, 0.8) #r = pB - pD
 ```
 
 ```{r}
-#Para paremtros optimos realizamos n replicas
+#Para parámetros óptimos realizamos n réplicas
 
 simulacion_n <- function(n){
   sims <- matrix(NA, nrow = n, ncol = 60) #iter = 60
@@ -203,6 +204,7 @@ ggplot(df_rm, aes(x = replicas, y = mean)) +
 ```{r}
 
 #Se estabiliza en n > 50
+set.seed(1234)
 sim <- simulacion_n(60)
 
 #INTERPOLACION
@@ -241,6 +243,7 @@ nSim <- nrow(sim_splines)
 mean_interp <- apply(sim_splines, 2, mean)
 var_interp  <- apply(sim_splines, 2, var)
 se_interp   <- sqrt(var_interp / nSim)
+mean(se_interp)
 
 # Banda de confianza 95%
 ribbon_df <- data.frame(
@@ -264,10 +267,10 @@ ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
     aes(x = t, y = N, color = "ABM Base")) +
   
            geom_line(data = df_spline |>  filter(sim == 1), size = 1,
-    aes(x = t, y = N_interp, color = "Interpolacion")) +
+    aes(x = t, y = N_interp, color = "Interpolación")) +
   
     scale_color_manual(values = viridis(20)[c(2, 13)],name = "") +
-    labs(title = "Simulación (1): Original vs Interpolacion", 
+    labs(title = "Simulación (1): Original vs Interpolación", 
           x = "Tiempo", y = "Población N(t)") +
   
     theme_minimal() +
@@ -348,11 +351,11 @@ coef_long <- pivot_longer(coef_glob_df, cols = A:D, names_to = "coef", values_to
 
 
 ggplot(coef_long, aes(x = valor)) +
-  geom_histogram(fill = viridis(20)[13]) +
+  geom_histogram(fill = viridis(20)[13], color = "black") +
   facet_wrap(~coef, scales = "free") +
   theme_minimal() +
   labs(x = "Valor del coeficiente", y = "Frecuencia",
-       title = "Distribucion de los coeficientes de interpolacion") +
+       title = "Distribución de los coeficientes de interpolación") +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
     legend.position = "right")
 
@@ -373,8 +376,10 @@ coefs_por_sim <- coefs_B(coeficientes)
 coefs_por_sim_df <- as.data.frame(coefs_por_sim)
 
 distancias <- dist(coefs_por_sim) #entrada  (i,j) indica qué tan distinta es la simulación i de la j según sus 240 coeficientes del spline
-dist_vec <- as.numeric(distancias)
-df_dist <- data.frame(distancia = dist_vec)
+dist_vec <- as.numeric(distancias) #paso el objeto dist a num
+df_dist <- data.frame(distancia = dist_vec) #df con todas las distsncias entre simulaciones
+dist_matrix <- as.matrix(distancias)
+which(dist_matrix == 718.30, arr.ind = TRUE)
 
 summary(dist_vec)
 sd(dist_vec)
@@ -387,12 +392,15 @@ sd(dist_norm)
 #este no entiendo
 
 ggplot(df_dist_norm) +
-  geom_histogram(aes(x=distancia), bins = 30, fill=viridis(20)[2]) +
-  labs(title = "Distancia entre simulaciones", x="Distancia" , y= "Distribucion")
+  geom_histogram(aes(x=distancia), bins = 60, fill=viridis(20)[2], color = "black") +
+  labs(title = "Distancia entre simulaciones estandarizada", x="Distancia" , y= "Distribución")+
+  theme_minimal()
+
+#boxplot por posible presencia de outliers
 
 ```
 
-## ABM - Extendido (edad y sexo biologico)
+## ABM - Extendido (edad y sexo biológico)
 
 ```{r}
 ABM_ext <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
@@ -520,7 +528,7 @@ for(name in names(ABM_3$plot)){
 #GRAFICAR CURVA
 ```
 
-### Analisis de sensibilidad
+### Análisis de sensibilidad
 
 ```{r}
 #Barrido con p_death variable y p_birth fijo (0.9)
@@ -635,6 +643,7 @@ ggplot(df_rm, aes(x = replicas, y = mean)) +
 
 
 res <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
+
 
 ```
 
