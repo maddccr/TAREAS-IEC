@@ -8,7 +8,7 @@ editor: visual
 
 # *Simulación de un modelo de crecimiento logístico mediante ABM*
 
-## ABM - Base
+## ABM - Base 
 
 ```{r, warning=FALSE, message=FALSE}
 #librerias
