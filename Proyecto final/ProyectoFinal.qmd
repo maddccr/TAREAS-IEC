@@ -8,7 +8,7 @@ editor: visual
 
 # *Simulación de un modelo de crecimiento logístico mediante ABM*
 
-## ABM - Base 
+## ABM - Base
 
 ```{r, warning=FALSE, message=FALSE}
 #librerias
@@ -413,7 +413,7 @@ coef_long <- pivot_longer(coef_glob_df, cols = A:D, names_to = "coef", values_to
 
 
 ggplot(coef_long, aes(x = valor)) +
-  geom_histogram(fill = viridis(20)[13], color = "black") +
+  geom_histogram(fill = viridis(20)[13], color = viridis(20)[13], alpha = 0.5) +
   facet_wrap(~coef, scales = "free") +
   theme_minimal() +
   labs(x = "Valor del coeficiente", y = "Frecuencia",
@@ -468,14 +468,16 @@ ggplot(matrizB_df_long, aes(x = coef_num, y = valor)) +
   theme_minimal() +
   labs(title = "Coeficientes B",
        x = "Índice del coeficiente",
-       y = "Valor")
+       y = "Valor") +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5))
 
 ggplot(matrizA_df_long, aes(x = coef_num, y = valor)) +
-  geom_point(alpha = 0.3, color=viridis(20)[13]) +
+  geom_point(alpha = 0.3, color=viridis(20)[2]) +
   theme_minimal() +
   labs(title = "Coeficientes A",
        x = "Índice del coeficiente",
-       y = "Valor")
+       y = "Valor") +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5))
 ```
 
 ## ABM - Extendido (edad y sexo biológico)
