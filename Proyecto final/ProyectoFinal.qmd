@@ -17,6 +17,8 @@ library(parallel)
 library(viridis)
 library(splines)
 library(patchwork)
+
+RNGkind(kind = "Mersenne-Twister", normal.kind = "Inversion")
 set.seed(1234)
 ```
 
@@ -169,7 +171,7 @@ simulacion_n <- function(n){
 }
 ```
 
-### Análisis de convergencia 
+### Análisis de convergencia
 
 ```{r}
 #Necesitamos determinar el numero de replicas adecuado
@@ -213,6 +215,9 @@ mu_2 <- mean(sims_2[, iter])
 
 df_ambas <- rbind(df_1, df_2)
 
+```
+
+```{r}
 
 ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
   #"banda" de confianza asumiendo aproximacion normal 
@@ -225,14 +230,14 @@ ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
   geom_hline(yintercept = mu_1, linetype = "dashed") +
   geom_hline(yintercept = mu_2, linetype = "dashed") +
   
-  geom_text(inherit.aes = FALSE, aes(x = -1, y = mu_1, label = round(mu_1, 1)),
-            vjust = -0.4, hjust = 1, size = 3, fontface = "plain",
-            alpha = 0.7) +
+  #geom_text(inherit.aes = FALSE, aes(x = -1, y = mu_1, label = round(mu_1, 1)),
+            #vjust = -0.4, hjust = 1, size = 3, fontface = "plain",
+            #alpha = 0.7) +
   
   scale_color_manual(values = c(viridis(20)[13], viridis(20)[2])) +
   scale_fill_manual(values = c(viridis(20)[13], viridis(20)[2])) +
   
-  scale_y_continuous(limits = c(0, 125)) +
+  scale_y_continuous(limits = c(60, 110)) +
   
   labs(title = "Convergencia del N(t) en el tiempo final para dos semillas",
        subtitle = "ABM base",
@@ -246,7 +251,6 @@ ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
         plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
         plot.caption = element_text(size = 8, hjust = 0.5, face = "italic"),
         legend.position = "bottom")
-
 
 ```
 
@@ -315,6 +319,7 @@ ggplot() + geom_line(data = df_spline |>  filter(sim == 1), size = 0.8,
 ```{r}
 
 #Para menos ruido grafico se eligen de forma aleatoria un tercio de las simualciones
+set.seed(1234)
 subset_idx <- sample(1:nrow(sim_splines), 20)
 df_spline_sub <- df_spline |> filter(sim %in% subset_idx)
 
@@ -339,7 +344,7 @@ p50 <- ggplot() +
   geom_line(data = df_EDO, aes(x = t, y = N_EDO),
             color = "black", size = 0.7) +
   #scale_color_viridis_c(end = 0.8) +
-  coord_cartesian(xlim = c(15, 50), ylim = c(85, 100)) +
+  coord_cartesian(xlim = c(15, iter), ylim = c(85, 100)) +
   labs(title = "Simulaciones interpoladas vs. EDO (t = 15-50)",
        subtitle = "ABM base",
        x = "Tiempo",y = "Población N(t)") +
@@ -474,6 +479,7 @@ ABM_ext <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
   
   habitat[sample(1:L, N0)] <- 1 
   N <- c() 
+  p_b <- c()
   
   #a cada agente inicial le asigno un sexo bio (1= fem 0 = masc) con ber(0.5)
   bio_sex <- rep(NA, L)
@@ -526,6 +532,7 @@ ABM_ext <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
   #Actualizar la cantidad de agentes
     
     N <- c(N, sum(habitat == 1))
+    p_b <- c(p_b, p_birth_K)
     
     if(plot) {
     
@@ -543,9 +550,11 @@ ABM_ext <- function(K, iter, p_death, p_birth, r = 1, plot = FALSE) {
     
     }
   
-}
+  }
   
-return(list(N = N, plot = timestamps_plot))
+  df_N <- data.frame(N = N, p = p_b, t = 1:iter)
+  
+return(list(N = N, plot = timestamps_plot, df_N = df_N))
   
 }
 
@@ -553,7 +562,8 @@ return(list(N = N, plot = timestamps_plot))
 
 ```{r}
 K <- 500
-ABM_3 <- ABM_ext(K, 60, 0.1, 0.9, plot = TRUE)
+set.seed(1234)
+ABM_3 <- ABM_ext(K, iter, 0.1, 0.9, plot = TRUE)
 
 par(mfrow=c(3,3), mar=c(2,2,2,2))
 for(name in names(ABM_3$plot)){
@@ -583,6 +593,104 @@ for(name in names(ABM_3$plot)){
 
 ```{r}
 #GRAFICAR CURVA
+set.seed(1234)
+ABM_4 <- ABM_ext(K, iter, 0.3, 0.8)
+
+df <- bind_rows(
+  ABM_3$df_N |>  mutate(simu = "pD=0.1, pB=0.9"),
+  ABM_4$df_N |>  mutate(simu = "pD=0.3, pB=0.8")
+)
+
+ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
+  geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
+             size = 0.8) +
+  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "ABM extendido",
+       x = "Tiempo", 
+       y = "Población N(t)\n Probabilidad de reproducción (%)", 
+       color = "Parámetros") +
+  scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
+  #scale_color_viridis(discrete = TRUE, option = "D") +
+  scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
+    name = "Variable") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
+        legend.position = "bottom")
+```
+
+### Análisis de convergencia
+
+```{r}
+#Analisis de convergencia para ABM extendido
+
+simulacion_n_ext <- function(n, pD, pB){
+  sims <- matrix(NA, nrow = n, ncol = iter) 
+  for (i in 1:n) {
+    res <- ABM_ext(500, iter, pD, pB)
+    sims [i, ] <- res$N
+  }
+  return(sims)
+}
+
+set.seed(1234) #estaria bueno paralelizar esto tbm pero bueno
+sims_3 <- simulacion_n_ext(200, 0.1, 0.9) 
+df_3 <- analisis_conver(sims_3)
+df_3$sim <- "pD=0.1, pB=0.9"
+mu_3 <- mean(sims_3[, iter])
+
+set.seed(1234)
+sims_4 <- simulacion_n_ext(200, 0.3, 0.9) 
+df_4 <- analisis_conver(sims_4)
+df_4$sim <- "pD=0.3, pB=0.9"
+mu_4 <- mean(sims_4[, iter])
+
+#df_ambas_ext <- rbind(df_3, df_4)
+```
+
+```{r}
+
+p3 <- ggplot(df_3, aes(x = replicas, y = mean)) +
+  #"banda" de confianza asumiendo aproximacion normal 
+  geom_ribbon(aes(ymin = mean - 1.96*se, 
+                  ymax = mean + 1.96*se), 
+              alpha = 0.2, color = NA, fill = viridis(20)[13]) +
+  geom_line(size = 0.8, color = viridis(20)[13]) +
+  #promedio total
+  geom_hline(yintercept = mu_3, linetype = "dashed") +
+
+  labs(title = "Convergencia del N(t) en el tiempo final \n pD = 0.1 pB = 0.9",
+       subtitle = "ABM extendido",
+       x= "Número de réplicas",
+       y = "Promedio acumulado",
+       caption = paste0("Promedio total: ", round(mu_3, 2))) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0.5, face = "italic"),
+        legend.position = "bottom")
+
+
+p4 <- ggplot(df_4, aes(x = replicas, y = mean)) +
+  #"banda" de confianza asumiendo aproximacion normal 
+  geom_ribbon(aes(ymin = mean - 1.96*se, 
+                  ymax = mean + 1.96*se), 
+              alpha = 0.2, color = NA, fill = viridis(20)[2]) +
+  geom_line(size = 0.8, color = viridis(20)[2]) +
+  #promedio total
+  geom_hline(yintercept = mu_4, linetype = "dashed") +
+  
+  labs(title = "Convergencia del N(t) en el tiempo final \n pD = 0.3 pB = 0.9",
+       subtitle = "ABM extendido",
+       x= "Número de réplicas",
+       y = "Promedio acumulado",
+       caption = paste0("Promedio total: ", round(mu_4, 2))) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
+        plot.caption = element_text(size = 10, hjust = 0.5, face = "italic"),
+        legend.position = "bottom")
+
+p3 / p4
 ```
 
 ### Análisis de sensibilidad
@@ -590,7 +698,7 @@ for(name in names(ABM_3$plot)){
 ```{r}
 #Barrido con p_death variable y p_birth fijo (0.9)
 #codigo palelizado para mayor eficiencia
-sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 100, 
+sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 150, 
                        p_death = seq(0, 0.5, by = 0.05)) {
   
   t0 <- Sys.time()
@@ -650,57 +758,9 @@ sens_paral <- function(K = 500, iter = 60, p_birth = 0.9, reps = 100,
 
 ```
 
-```{r}
-#Analisis de convergencia para ABM extendido
-
-simulacion_ext <- function(n){
-  sims <- matrix(NA, nrow = n, ncol = 60) #iter = 60
-  for (i in 1:n) {
-    res <- ABM_ext(500, 60, 0.1, 0.9)
-    sims [i, ] <- res$N
-  }
-  return(sims)
-}
-
-
-runs <- simulacion_ext(200)
-final_N <- runs[, 60] #metrica N(t) final
-
-
-#running_var <- cumsum((vals - running_mean)^2) / (1:length(vals))
-running_mean <- cumsum(final_N)/(1:length(final_N))
-
-running_var <- sapply(1:length(final_N), function(m){
-  var(final_N[1:m])/m
-})
-running_se <- sqrt(running_var)
-
-
-df_rm <- data.frame(
-  replicas = 1:length(running_mean),
-  mean = running_mean,
-  se = running_se)
-
-ggplot(df_rm, aes(x = replicas, y = mean)) +
-  geom_ribbon(aes(ymin = mean - 1.96*se, ymax = mean + 1.96*se), 
-              alpha = 0.3, fill = viridis(20)[13]) +
-  geom_line(color = viridis(20)[2], size = 0.8) +
-  geom_hline(yintercept = mean(final_N), linetype = "dashed") +
-  labs(title = "Convergencia del N(t) final (running mean)",
-       x= "Número de réplicas",
-       y = "Promedio acumulado") +
-  theme_minimal() +
-  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
-        legend.position = "bottom")
-
-
-```
-
 ```{r, warning=FALSE}
-
-
+#paciencia con este que tiene que hacer mucha cosa
 res <- sens_paral(p_death = seq(0.2, 0.35, by = 0.005), iter = 100)
-
 
 ```
 
@@ -724,7 +784,7 @@ ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
   geom_hline(yintercept = N0, linetype = "dashed", size = 1) +
   labs(color = "p_death",
        x = "Tiempo",
-       y = "Población promedio",
+       y = "Población N(t) promedio",
        title = "Crecimiento poblacional para distintos p_death") +
   scale_color_viridis_c(option = "D") +
   scale_fill_viridis_c() +
@@ -735,10 +795,4 @@ ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
 
 ```
 
-```{r}
-#SENSIBILIDAD MULTIVARIADA CON CORTE TRANSVERSAL
-
-
-
-
-```
+*Si llegaste hasta aca gracias por mirar nos costo mucho :3*
