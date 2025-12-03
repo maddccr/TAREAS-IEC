@@ -249,6 +249,8 @@ ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
 
 ```
 
+### Interpolación
+
 ```{r}
 
 #Se estabiliza en n > 50
@@ -267,7 +269,7 @@ interpolar_sims <- function(sims) {
   return(interpolated)
 }
 
-sim_splines <- interpolar_sims(sim)
+sim_splines <- interpolar_sims(sim) #nSim x nPuntos (200)
 ```
 
 ```{r}
@@ -282,10 +284,7 @@ df_EDO <- data.frame(
   N_EDO = soluciones
 )
 
-sim_matrix <- sim_splines # matriz nSim x nPuntos (200)
-t200 <- seq(1, iter, length.out = 200)
-
-
+t200 <- seq(1, iter, length.out = 200) #ajustar el escala de las spline
 nSim <- nrow(sim_splines)
 
 mean_interp <- apply(sim_splines, 2, mean)
@@ -293,7 +292,7 @@ var_interp  <- apply(sim_splines, 2, var)
 se_interp   <- sqrt(var_interp / nSim)
 mean(se_interp)
 
-# Banda de confianza 95%
+#Banda de confianza 95%
 ribbon_df <- data.frame(
   t    = t200,
   ymin = mean_interp - 1.96 * se_interp,
@@ -306,9 +305,9 @@ df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |>
   mutate(index = as.numeric(index),t = t200[index])
 
 
-
 #Para menos ruido grafico se eligen de forma aleatoria
 subset_idx <- sample(1:nrow(sim_splines), 12)
+
 df_spline_sub <- df_spline |> filter(sim %in% subset_idx)
 
 ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
@@ -343,6 +342,12 @@ ggplot() +
 #alpha 0.08 color grey30 para graficar todas
 
 ```
+
+```{r}
+#pipipi
+```
+
+### EDA coeficientes
 
 ```{r}
 #coeficientes de los splines
