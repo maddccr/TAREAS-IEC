@@ -16,6 +16,7 @@ library(tidyverse)
 library(parallel)
 library(viridis)
 library(splines)
+library(patchwork)
 set.seed(1234)
 ```
 
@@ -119,7 +120,7 @@ df <- bind_rows(
 ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
   geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
              size = 0.8) +
-  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "(ABM base)",
+  labs(title = "Evolución en el tiempo de la población \n y la probabilidad efectiva de reproducción", subtitle = "ABM base",
        x = "Tiempo", 
        y = "Población N(t)\n Probabilidad de reproducción (%)", 
        color = "Parámetros") +
@@ -129,7 +130,7 @@ ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
     name = "Variable") +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
-        plot.subtitle = element_text(size = 13, hjust = 0.5),
+        plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
         legend.position = "bottom")
  
 ```
@@ -234,7 +235,7 @@ ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
   scale_y_continuous(limits = c(0, 125)) +
   
   labs(title = "Convergencia del N(t) en el tiempo final para dos semillas",
-       subtitle = "(ABM base)",
+       subtitle = "ABM base",
        x= "Número de réplicas",
        y = "Promedio acumulado",
        color = "Semilla", fill = "Semilla",
@@ -242,7 +243,7 @@ ggplot(df_ambas, aes(x = replicas, y = mean, color = sim, fill = sim)) +
                         "Promedio total seed_1234: ", round(mu_2, 2))) +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
-        plot.subtitle = element_text(size = 13, hjust = 0.5),
+        plot.subtitle = element_text(size = 13, hjust = 0.5, face = "italic"),
         plot.caption = element_text(size = 8, hjust = 0.5, face = "italic"),
         legend.position = "bottom")
 
@@ -274,30 +275,12 @@ sim_splines <- interpolar_sims(sim) #nSim x nPuntos (200)
 
 ```{r}
 
-df_sim1 <- data.frame(
-  t = 1:length(sim[1, ]),
-  N = sim[1, ]
-)
-
 df_EDO <- data.frame(
   t = 1:length(sim[1, ]),
   N_EDO = soluciones
 )
 
 t200 <- seq(1, iter, length.out = 200) #ajustar el escala de las spline
-nSim <- nrow(sim_splines)
-
-mean_interp <- apply(sim_splines, 2, mean)
-var_interp  <- apply(sim_splines, 2, var)
-se_interp   <- sqrt(var_interp / nSim)
-mean(se_interp)
-
-#Banda de confianza 95%
-ribbon_df <- data.frame(
-  t    = t200,
-  ymin = mean_interp - 1.96 * se_interp,
-  ymax = mean_interp + 1.96 * se_interp
-)
 
 df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |> 
   mutate(sim = row_number()) |> 
@@ -305,46 +288,67 @@ df_spline <- sim_splines |> as.data.frame() |> setNames(1:200) |>
   mutate(index = as.numeric(index),t = t200[index])
 
 
-#Para menos ruido grafico se eligen de forma aleatoria
-subset_idx <- sample(1:nrow(sim_splines), 12)
+#Comparacion de una simulacion con su interpolacion
+df_sim1 <- data.frame(
+  t = 1:length(sim[1, ]),
+  N = sim[1, ]
+)
 
-df_spline_sub <- df_spline |> filter(sim %in% subset_idx)
-
-ggplot() + geom_point(data = df_sim1, size = 1, alpha = 0.8,
-    aes(x = t, y = N, color = "ABM Base")) +
-  
-           geom_line(data = df_spline |>  filter(sim == 1), size = 1,
+ggplot() + geom_line(data = df_spline |>  filter(sim == 1), size = 0.8,
     aes(x = t, y = N_interp, color = "Interpolación")) +
   
+           geom_point(data = df_sim1, size = 1, alpha = 0.8,
+    aes(x = t, y = N, color = "ABM Base")) +
+  
     scale_color_manual(values = viridis(20)[c(2, 13)],name = "") +
-    labs(title = "Simulación (1): Original vs Interpolación", 
+    labs(title = "Original vs Interpolación", 
+         subtitle = "para una simulación del ABM base",
           x = "Tiempo", y = "Población N(t)") +
   
     theme_minimal() +
     theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
-    legend.position = "bottom")
-
-ggplot() +
-  geom_ribbon(data = ribbon_df, aes(x = t, ymin = ymin, ymax = ymax),
-              fill = viridis(20)[20], alpha = 0.5) +
-  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim), color=viridis(10)[5], alpha = 0.7) +
-  geom_line(data = df_EDO, aes(x = t, y = N_EDO),
-            color = "black", size = 0.7) +
-  
-  scale_color_viridis_c(end = 0.8) +
-  labs(title = "Todas las simulaciones interpoladas (spline)",
-       x = "Tiempo",y = "Población interpolada") +
-  theme_minimal() +
-  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
-    legend.position = "right")
-
-
-#alpha 0.08 color grey30 para graficar todas
+          plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
+          legend.position = "bottom")
 
 ```
 
 ```{r}
-#pipipi
+
+#Para menos ruido grafico se eligen de forma aleatoria un tercio de las simualciones
+subset_idx <- sample(1:nrow(sim_splines), 20)
+df_spline_sub <- df_spline |> filter(sim %in% subset_idx)
+
+p15 <- ggplot() +
+  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim), 
+            color=viridis(10)[5], alpha = 0.5) +
+  geom_line(data = df_EDO, aes(x = t, y = N_EDO),
+            color = "black", size = 0.7) +
+  #scale_color_viridis_c(end = 0.8) +
+  coord_cartesian(xlim = c(0, 15)) +
+  labs(title = "Simulaciones interpoladas vs. EDO (t = 0-15)",
+       subtitle = "ABM base",
+       x = "Tiempo",y = "Población N(t)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
+        legend.position = "right")
+
+p50 <- ggplot() +
+  geom_line(data = df_spline_sub, aes(x = t, y = N_interp, group = sim), 
+            color=viridis(10)[5], alpha = 0.5) +
+  geom_line(data = df_EDO, aes(x = t, y = N_EDO),
+            color = "black", size = 0.7) +
+  #scale_color_viridis_c(end = 0.8) +
+  coord_cartesian(xlim = c(15, 50), ylim = c(85, 100)) +
+  labs(title = "Simulaciones interpoladas vs. EDO (t = 15-50)",
+       subtitle = "ABM base",
+       x = "Tiempo",y = "Población N(t)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
+        legend.position = "right")
+
+p15/p50
 ```
 
 ### EDA coeficientes
