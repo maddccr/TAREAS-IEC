@@ -827,8 +827,8 @@ ggplot(df_long, aes(x = time, y = mean, color = p_death, group = p_death)) +
 
 ```{r}
 df_EDO_long <- do.call(rbind, lapply(p_death_vals, function(pd) {
-  # aquí asumimos que el crecimiento r depende de pd si querés
-  r <- 0.9 - pd # ejemplo: r disminuye con p_death
+  
+  r <- 0.9 - pd 
   N_EDO <- sols(iter, K, N0, r)
   
   data.frame(time = 1:iter, p_death = pd, N_EDO = N_EDO) }))
