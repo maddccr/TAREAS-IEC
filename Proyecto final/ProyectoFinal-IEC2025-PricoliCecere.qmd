@@ -2,11 +2,12 @@
 title: "ProyectoFinal"
 format: html
 editor: visual
+author: Madeline Cecere, Florencia Prícoli
 ---
 
 ## Proyecto Final - IEC 2025
 
-# *Simulación de un modelo de crecimiento logístico mediante ABM*
+# *Simulación del crecimiento poblacional logístico mediante Modelos Basados en Agentes (ABM)*
 
 ## ABM - Base
 
