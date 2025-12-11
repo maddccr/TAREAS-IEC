@@ -1,0 +1,335 @@
+\documentclass[11pt, a4paper]{article}
+
+%500 millones de paquetines
+\usepackage{graphicx} %para incluir graficos /imagenes
+\usepackage{wrapfig}
+\graphicspath{{graficos/}} 
+\usepackage[spanish]{babel}
+\usepackage{mathptmx} %flor es TNR lover
+\usepackage[T1]{fontenc}
+%\usepackage{indentfirst} %para mejor lectura sisi
+\usepackage[skip=8pt plus1pt, indent=20pt]{parskip}
+\usepackage{apacite}  
+\usepackage{amsmath}
+\usepackage[labelsep=none]{caption}
+\usepackage{geometry} %CAMBIAR MARGENES
+\geometry{a4paper,total={170mm,257mm},left=20mm,top=20mm,}
+\usepackage{enumitem}
+\setlist{noitemsep}
+
+\usepackage[font=small]{caption}
+
+\title{Simulación del crecimiento poblacional logístico mediante Modelos Basados en Agentes (ABM)}
+\author{Madeline Cecere, Florencia Prícoli}
+\date{Diciembre 2025}
+
+\begin{document}
+%\maketitle
+
+%CARATULA
+\thispagestyle{empty} 
+
+\begin {center}
+UNIVERSIDAD DE LA REPÚBLICA
+
+Facultad de Ciencias Económicas y de Administración
+
+Licenciatura en Estadística
+
+\vspace{4.5 cm}
+
+\textbf{\large Simulación del crecimiento poblacional logístico mediante Modelos Basados en Agentes (ABM)}
+
+\vspace{4.5 cm}
+
+\textbf{Madeline Cecere, Florencia Prícoli}\\
+Diciembre 2025
+
+\vspace{7.5cm}
+
+Trabajo final de Introducción a la Estadística Computacional
+\footnote{https://github.com/maddccr/TAREAS-IEC/tree/main/Proyecto\_Final}
+
+\end{center}
+
+
+%PRIMERA PAGINA
+\newpage
+\setcounter{page}{1} 
+
+\begin{center}
+\textbf{Simulación del crecimiento poblacional logístico mediante Modelos Basados en Agentes (ABM)}
+\end{center}
+
+\begin{center}
+Madeline Cecere \footnote{ccr.maddie@gmail.com} y Florencia Prícoli  \footnote{florenciapricoli14@gmail.com} \\
+\end{center}
+
+\begin{abstract}
+\selectlanguage{spanish}
+El objetivo del trabajo fue emplear la metodología de Modelos Basados en Agentes para reproducir el crecimiento poblacional logístico. Se implementó un modelo base, solo considerando el factor de la capacidad de carga ambiental ($K$), y uno extendido, incluyendo los atributos de sexo biológico y edad de los agentes. Se estudió el comportamiento de la evolución de la cantidad poblacional $N(t)$ mediante simulación Monte Carlo y se compararon los resultados con la solución analítica de la ecuación diferencial clásica. Para condiciones iniciales óptimas se logró replicar la dinámica con ambos modelos. El modelo extendido presentó una velocidad de crecimiento menor y alta sensibilidad a las variaciones paramétricas, detectándose una región crítica de extinción casi segura. 
+\end{abstract}
+ 
+\section{Introducción}
+
+El fenómeno a modelar surge en el marco de la ecología. En este ámbito, las poblaciones son conjuntos de organismos de una misma especie que conviven e interactúan en determinado hábitat. Su abundancia varía constantemente con el correr del tiempo por diversos factores. En el caso de una población cerrada, la tasa de crecimiento se rige por las tasas de natalidad y mortalidad. En cuanto a las abiertas, a estas variables se incorporan las tasas de emigración e inmigración de individuos. A su vez, a estos elementos se adhieren otras dinámicas intra e interespecie como la competencia, las especies invasoras, las explosiones demográficas esporádicas y las dinámicas cíclicas como la de la presa y el depredador. \par
+
+En condiciones óptimas en las que los recursos del ambiente son ilimitados las poblaciones presentan crecimientos exponenciales con una tasa de crecimiento constante. A medida que aumenta la población, más rápido es el crecimiento. No obstante, en la naturaleza esto es imposible. Los recursos como el agua, los nutrientes y los sitios de anidación se agotan y se incrementa la competencia, de manera que la tasa de crecimiento desciende y la de mortalidad aumenta. Por lo tanto, el número de individuos de una población está limitado por la capacidad del ambiente en el que se desarrollan. Esto es conocido como la capacidad de carga ($K$), definida como la mayor población que un ambiente puede mantener de forma sostenible, cuya variabilidad depende de cambios en las condiciones ambientales \cite{solomon_biologia_2013}. \par
+
+El modelo logístico, desarrollado originalmente por Verhulst (1838), tiene en cuenta esta variable, bajo el supuesto de condiciones ambientales constantes, y es utilizado en biología para explicar el crecimiento de poblaciones con reproducción continua. Consiste en la ecuación diferencial: \(dN/dt = rN( 1 -N/K)\), cuyas soluciones se caracterizan por un crecimiento exponencial al inicio y una estabilización a medida que se acercan a la capacidad de carga. \par
+
+En este contexto, el presente trabajo tuvo como objetivo utilizar la metodología de los Modelos Basados en Agentes (ABM) para modelar la evolución de una población cerrada, sin tener en cuenta sus interacciones con otras especies, bajo la limitación de la capacidad del ambiente. Se buscó determinar si es posible replicar el comportamiento logístico poblacional mediante la simulación de dinámicas vitales individuales. Para ello se implementaron dos modelos ABM, uno base y uno con mayor complejidad y realismo biológico. Por su naturaleza estocástica, se estudió su variabilidad y sensibilidad mediante simulación Montecarlo y se compararon los resultados con la solución determinista.  
+
+\section{Metodología}
+\subsection{Agent-Based Model (ABM)}
+
+Los ABMs son modelos de simulación computacional altamente flexibles cuyo componente principal son \textit{agentes} autónomos y discretos, es decir, que tienen \textit{“un claro límite entre sí mismos y el entorno”} \cite{sayama_introduction_2015}. La construcción de un ABM implica la descripción algorítmica de reglas de comportamientos e interacción entre agentes, así como de sus atributos internos, con distintos niveles de complejidad. Se pretende a partir de estos patrones individuales simular comportamientos colectivos emergentes.  \par
+
+En el presente trabajo se implementaron en R dos modelos ABM, base y extendido, que se reportan a continuación siguiendo el protocolo ODD, \textit{“Overview, Design concepts, Details”} \cite{grimm_odd_2020}.
+
+\begin{enumerate}
+%\renewcommand{\labelenumi}{\roman{enumi}}
+\renewcommand{\theenumi}{\roman{enumi}}
+\renewcommand{\labelenumi}{(\roman{enumi})}
+
+    \item \textbf{Patrones}:
+Se simula el fenómeno de nacimiento-muerte de una población, incorporando el factor de la capacidad de carga del entorno ($K$) para replicar el crecimiento logístico. En la version extendida se incluyen como atributos de los agentes características biológicas que impactan de forma directa las capacidades reproductivas y de supervivencia: el sexo biológico, que condiciona la reproducción, y la edad, como factor de riesgo que modula la mortalidad. Esto incrementa el realismo biológico, coherente con recomendaciones de ABM ecológicos modernos \cite{grimm_odd_2010}. 
+
+    \item \textbf{Parámetros, entidades, variables de estado y escala:}  
+    
+Parámetros
+\begin{itemize} 
+\setlength\itemsep{0.05cm}
+    \item Capacidad de carga ($K$): capacidad máxima de agentes que puede abarcar el ambiente sin degradarse. Representa los recursos disponibles necesarios para la supervivencia.
+    \item $pdeath$: probabilidad inicial de que un agente muera en una iteración.
+    \item $pbirth$: probabilidad inicial de que un agente se reproduzca en una iteración.
+\end{itemize}
+
+Entidades
+\begin{itemize}
+    \item Agentes: los agentes representan individuos miembros de una misma especie, con reproducción sexual sin considerar su estacionalidad.
+    \item Ambiente: el hábitat está representado por una grilla discreta de tamaño \(L \times L\), con \(L = \bigl(\lceil \sqrt{K}\rceil\bigr)^2\)
+    \item Tracker temporal: es un modelo en tiempo discreto con unidades arbitrarias. Cada iteración es un paso de tiempo.
+
+
+\end{itemize}
+Variables de estado
+\begin{itemize}
+    \item Hábitat: representa el estado de ocupación de cada celda del ambiente, cero (0) si está desocupada y uno (1) si está ocupada. Cada celda puede estar ocupada por un único agente.
+    \item \textit{Biosex}: representa el sexo biologico de cada agente, uno (1) femenino (SF) y cero (0) masculino (SM). Se asigna a partir de una $Bernoulli(0.5)$.
+    \item Edad: representa la edad de cada agente, inicia en cero y aumenta una unidad en cada iteración. 
+
+\end{itemize}
+Escala
+\begin{itemize}
+    \item Para el ABM base se utiliza K=100, hábitat tamaño 100x100 y tiempo máximo 50.
+    \item Para el ABM extendido se utiliza K = 500, hábitat tamaño 500x500 y tiempo máximo 50.
+
+
+\end{itemize}
+\item \textbf{Conceptos de diseño:} los ABM se actualizan de forma sincrónica. Tienen un comportamiento estocástico: el fenómeno poblacional se simula como un proceso de muerte-nacimiento, y los procesos de asignacion del sexo biológico y la colocación de los agentes en la celdas libres también son aleatorios. No se modelan interacciones directas entre los agentes ni procesos adaptativos. Para registrar la evolución en el tiempo de la población simulada se monitorea el número de agentes $N(t)$, la probabilidad efectiva de reproducción $PB(t)$ y la distribución espacial en el hábitat. 
+\vspace{0.2cm}
+\item \textbf{Procesos y flujo:}
+\begin{itemize}
+    \item Envejecimiento: \(edad_i = edad_i + 1\)
+    \item Muerte: se calcula la probabilidad de muerte efectiva para cada agente. En el ABM base es constante, se mantiene el $pdeath$ inicial. En el extendido: 
+    \[
+    p_{\text{deathEff}} = \min\bigl[pdeath \,(1 +  \frac{\text{edad}_i}{\text{iter}}),\,\, 1\bigr]
+    \]
+
+    Con  \(X \sim \text{Uniform}(0,1)\), si \(x < p_{\text{deathEff}}\), el agente muere y se libera la celda. Esto es equivalente a evaluar \(X \sim \text{Ber}(p_{\text{deathEff}})\).
+    \item Nacimiento: Se calcula la probabilidad de reproducción efectiva:      
+        \[
+        p_{\text{birth},K} = p_{\text{birth}} \,(1 - \tfrac{K}{N})
+        \]
+
+Es decir, disminuye a medida que aumenta la población.  
+En el ABM extendido, solo los agentes con sexo biológico (1) pueden reproducirse. Se evalua como el proceso \textit{muertes}. Si se reproducen, se crea un nuevo agente y se asigna aleatoriamente a una celda libre.
+\end{itemize}
+
+\item \textbf{Inicialización: }
+\begin{itemize}
+    \item Se inicializan los modelos con una baja cantidad poblacional ($N0$) para poder visualizar la curva de crecimiento. El ABM base se inicializa con 1\% de la carga ($100$) y el extendido con 5\% de la carga ($500$). La edad de los agentes iniciales es cero ($0$).
+    \item Los parámetros $pbirth, pdeath$ se inicializan de forma óptima, mortalidad baja y natalidad alta, dado que luego son modulados dinámicamente por la carga y edad. Se utilizan las combinaciones $(0.9; 0.1)$  y $(0.8; 0.3)$.
+\end{itemize}
+\end{enumerate} 
+
+
+\subsection{Simulación de Monte Carlo}
+Debido a la naturaleza estocástica inherente a los ABMs implementados se realizaron simulaciones Monte Carlo para analizar su comportamiento, práctica usual reportada por \citeA{sayama_introduction_2015} por ser en general no tratables matemáticamente, debido a su alta complejidad. Según la definición de \citeA{gentle_computational_2009}: \textit{“Monte Carlo methods are experiments. Monte Carlo experimentation is the use of simulated random numbers to estimate some functional of a probability distribution.”} \par
+
+En este trabajo este método se implementó para obtener múltiples trayectorias de $N(t)$ en el ABM base, que luego se interpolan para estudiar su variabilidad en comparación con la solución analítica de la EDO, y para realizar un análisis de sensibilidad en el ABM extendido. Para establecer la cantidad adecuada de réplicas, para cada modelo se realizó un análisis de convergencia sobre un estimador Monte Carlo construido a partir de la población final $N(T)$; métrica finita, observable y de fácil cómputo que se asume como representante del proceso. \par
+
+Cada simulación (\(S_j\)) produce un valor aleatorio de \(N_j\)(T). Se utilizó como estimador de su esperanza la media acumulada muestral: \(\mu_n = \frac{1}{n} \sum_{j=1}^{n} N_j(T)\).  Según el Teorema del Límite Central este tipo de estimadores son asintóticamente normales, bajo condiciones de integrabilidad \cite{robert_introducing_2010}. En base a esta aproximación, se construyó una banda de confianza: \( \mu_n \pm 1.96\frac{\hat{\sigma}_n}{\sqrt{n}}\), donde $\hat{\sigma}_n$ es la varianza muestral de las primeras $n$ réplicas.
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/convergencia.png}
+    \caption{: para las dos semillas probadas se observó estabilidad para $n\geq150$ }
+    \label{fig:conver1}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/convergenciaExtendido.png}
+    \caption{: para los dos valores de pD límite, se observó estabilidad para $n\geq150$ }
+    \label{fig:conver2}
+\end{minipage}
+\end{figure}
+
+No obstante, aunque la banda construida es válida asintóticamente, \textit{“la frecuencia con la que [la secuencia producida al repetir el experimento] permanecerá dentro de la banda no alcanzará la probabilidad nominal de 0,95”} \cite{robert_introducing_2010}. Puede ser necesario realizar un análisis más robusto, con una métrica que captura la totalidad de las trayectorias y con otro método, como el \textit{“fixed-width batch mean”}.
+
+
+\subsection{Interpolación de trayectorias}
+
+La EDO logística tiene solución analítica cerrada:  
+\[
+N(t) = \frac{K N_0}{N_0 + (K - N_0)\, e^{-r t}}
+\]
+
+A fin de realizar la posterior comparación, en la elección de los parámetros usados se buscó una correspondencia con los parámetros del modelo. Por consiguiente, se tomó $K=100$, $t=50$, $N0=1$ y $r=0.8$. Este último valor surgió de asumir equivalencia entre la probabilidad de reproducción y la tasa de natalidad y entre la probabilidad de muerte y la tasa de mortalidad, para luego calcular la diferencia ($pbirth - pdeath$). \par 
+
+Para comparar los resultados del modelo discreto con la solución analítica de la ecuación diferencial, en tiempo continuo, se recurrió a la interpolación mediante splines cúbicas para generar curvas con una mayor resolución temporal.  Esta técnica de interpolación enlaza los puntos existentes mediante polinomios de grado tres. Se define \(S_i\) como la función cúbica polinomial que representa la curva entre dos puntos, conocidos como nodos, construyéndose para $n$ nodos $n-1$ polinomios \cite{howard_computational_2017}. Se eligió este método de interpolación porque permite generar una curva suave que facilita la comparación con la curva de la solución determinística y se implementó en R  a través de la función \textit{spline} del paquete \textit{splines} \cite{r_core_team_r_2024}. \par
+
+\[
+S_i =  D_i(x - xi)^3 + C_i(x - xi)^2 + B_i(x - xi) + A_i
+\]
+
+En una misma línea, con el objetivo de estudiar el comportamiento global de estas interpolaciones y medir el efecto de la estocasticidad del modelo, se realizó un análisis (EDA) de las distribuciones de los coeficientes de los splines, tanto a nivel agregado como segregados por tramo de la interpolación.
+
+\subsection{Análisis de sensibilidad}
+La incorporación de factores estocásticos y de mayor complejidad en los procesos simulados, como en el caso del ABM extendido, puede conllevar una mayor sensibilidad  a cambios en las condiciones iniciales. Por lo tanto, se realizó un análisis de sensibilidad para evaluar el comportamiento del modelo frente a variaciones de sus parámetros clave, con el objetivo de identificar posibles regiones donde emerjan trayectorias cualitativamente distintas \cite{saltelli_sensitivity_2004}. \par
+
+El análisis implementado fue local, o univariado, donde \textit{“los valores de otros factores de entrada se mantienen constantes”}  \cite{zhou_local_2008}. El parámetro explorado fue la probabilidad de muerte ($pdeath$). En un primer análisis exploratorio, con saltos de 0.05 para valores de 0 a 0.5, se identificó como región de interés los valores 0.2 y 0.35, donde se realizó un barrido con mayor resolución con saltos de 0.05. Para cada valor se realizaron 150 réplicas (figura \ref{fig:conver2}) independientes para estimar la trayectoria promedio de $N(t)$, utilizando la librería \textit{parallel} \cite{r_core_team_r_2024} para mejorar la eficiencia y reducir el tiempo de cómputo. Por último, con fines comparativos, se calculó la solución determinista para los valores correspondientes de $pdeath$. 
+
+\subsection{Manipulación de datos y vizualización}
+Para la construcción y manejo de \textit{dataframes} y para la vizualiación de los resultados se utilizaron las librerías \textit{tidyverse} \cite{wickham_tidyverse_2019}, \textit{patchwork} \cite{pedersen_patchwork_2024} y \textit{viridis} \cite{viridis}
+
+%YIPI
+
+\section{Resultados y discusión}
+
+\subsubsection{ABM base}
+La simulación del modelo base para las dos variantes de valores de la probabilidad de reproducción y muerte (figura  \ref{fig:abmB1}) demostró una evidente similitud con el modelo logístico clásico. Para los valores más óptimos ($pD=0.1$ y $pB=0.9$) la curva tuvo un crecimiento exponencial hasta alcanzar la capacidad de carga y se mantuvo en un rango estable de valores cercanos para $t > 10$. Para los valores levemente menos óptimos ($pD=0.3$ y $pB=0.8$) la curva tuvo igualmente un crecimiento exponencial pero más lento en comparación a la primera simulación, luego alcanzó $K$ y se estabilizó, aunque con mayor variabilidad. A su vez, la evolución de la probabilidad de reproducción efectiva, modulada por la carga, evidenció un comportamiento simétrico. Decreció rápidamente y, después, se mantuvo en un rango estable en ambas simulaciones. En la más óptima decreció con mayor velocidad y a partir de $t > 15$ varió en un rango próximo al 15\%. En la menos óptima se estabilizó en torno al 30\%. \par
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.67\textwidth]{graficos/ABMbase2.png}
+    \caption{""}
+    \label{fig:abmB1}
+\end{figure}
+
+\begin{wrapfigure}{l}{0.45\textwidth}
+    \includegraphics[width=0.9\linewidth]{graficos/origVSinterp.png} 
+    \caption{}
+    \label{fig:interp}
+\end{wrapfigure}
+
+El resultado anterior no fue esporádico, se evidenció un comportamiento similar en las sesenta réplicas realizadas de la simulación con parámetros $(0.1, 0.9)$. A su vez, se visualizó el comportamiento estocástico, la variabilidad de las trayectorias, siendo incluso posible la aparición de trayectorias nulas, es decir, extinción estocástica. \par
+
+
+Al comparar un tercio (20), de las curvas interpoladas (figura \ref{fig:interp}) con la solución analítica de la ecuación diferencial en tiempo continuo (figura \ref{fig:simutrayec}), aunque para el intervalo de tiempo $[0, 15]$ la mayoría replicó la forma del crecimiento, se observó una clara diferencia en la velocidad del mismo, en algunas particularmente marcado. El modelo simulado pareciera tender a subestimar la cantidad poblacional que determina el modelo clásico, presentando un crecimiento más lento.  \par
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.62\textwidth]{graficos/simsInterpoladasvsEDO.png}
+    \caption{""}
+    \label{fig:simutrayec}
+\end{figure}
+ 
+Una posible explicación es la elección en la parametrización de la EDO ($r = pbirth - pdeath$). La relación entre las probabilidades a nivel agente y las tasas poblacionales utilizadas en el modelo determinista puede no ser directa, lo cual plantea la necesidad de estimar las tasas poblacionales emergentes de la propia simulación, o parametrizaciones alternativas. Por otro lado, el modelo logístico puede ser formulado para tiempo discreto, como una ecuación recursiva o en diferencias, que se caracterizan por una mayor sensibilidad a las condiciones iniciales y un comportamiento oscilatorio o incluso caótico \cite{godinez_sistemas_2019}. Es posible que el comportamiento de el ABM, también modelado para tiempo discreto, sea más compatible con esta formulación. \par
+
+Por otro lado, para el intervalo temporal $[15, 50]$, se presentó un claro ejemplo de ruido estocástico, las trayectorias interpoladas logran alcanzar la capacidad de carga, equilibrio de la solución analítica, pero oscilan constantemente en el rango de aproximadamente 90 a 100 $N(t)$. Aunque esta variabilidad es inherente a los procesos estocásticos, es posible que se vea agravada por el método de interpolación utilizado, por lo que para este tramo podrían resultar más edecuados otros métodos de interpolación o aproximación de las trayectorias, priorizando captar la forma del movimiento más que la exactitud en los nodos. \par
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.6\textwidth]{graficos/dist.Coefs.png}
+    \caption{""}
+    \label{fig:distcoef}
+\end{figure}
+
+En cuanto al EDA de los coeficentes de intepolacion: el coeficiente A coincide con los nodos, es decir, los valores efectivos de la simulación a partir de los cuales se hizo la interpolación. En el gráfico (figura \ref{fig:distcoef}) se observó que su distribución es coherente con su definición; la mayoría se acumula en valores cercanos a la capacidad de carga, donde se estabiliza el número de individuos en los últimos tiempos de la simulación. \par
+
+El coeficiente B indica qué tan rápido crece la población al comienzo de cada intervalo; en el contexto poblacional puede interpretarse como una tasa de crecimiento local. Su distribución muestra una concentración en torno al cero ya que muchos de los tramos pertenecen a la parte de las curvas que se estabiliza en la capacidad de carga, sin embargo, presenta  una cola hacia valores más altos que corresponde al crecimiento veloz del comienzo de las curvas. Esta variabilidad entre las pendientes de los tramos iniciales y finales explica el desvío estándar alto (4.8). \par
+
+Por otro lado, el coeficiente C indica la curvatura del tramo, si su valor es positivo, indica una aceleración  del crecimiento y si es negativo, una desaceleración. De manera similar al B, los tramos se compensaron; esto explica la media (0) y la mediana (0). Además, estas medidas indican una concentración en torno al 0 que se debió a la cantidad de tramos en los que la aceleración se mantuvo estable (crecimiento acelerado). \par
+
+Debido a que las distribuciones globales de los coeficientes no brindaron suficiente información acerca del comportamiento en función del tiempo, el análisis desagregado aportó un punto de vista más ilustrativo. \par
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/coefA.png}
+    \caption{""}
+    \label{fig:coefA}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/CoefB.png}
+    \caption{""}
+    \label{fig:coefB}
+\end{minipage}
+\end{figure}
+
+El gráfico de puntos del coeficiente A (figura \ref{fig:coefA}) se condijo con el gráfico de las simulaciones interpoladas. También presentó un conjunto de puntos sobre el eje de abscisas, por lo que permitió visualizar que una de las trayectorias simuladas deriva en la extinción poblacional. El gráfico del coeficiente B (figura \ref{fig:coefB}) mostró una tendencia clara a valores bajos de pendiente en tiempos iniciales que desembocaron en valores muy altos para los momentos inmediatos y, finalmente, valores en torno al cero para los tiempos finales. \par
+
+
+\subsection{ABM extendido}
+
+\begin{wrapfigure}{l}{0.4\textwidth}
+    \includegraphics[width=0.9\linewidth]{graficos/evolucionEspacialExtensión.png} 
+    \caption{: Distribución espacial de los agentes. Se observa el crecimiento y saturación del habitat. La configuración no es relevante en el modelo }
+    \label{fig:evol}
+\end{wrapfigure}
+
+La extensión, que contempla el sexo biológico y la edad de los individuos, presentó un comportamiento relativamente similar al del ABM base para los valores óptimos (0.1, 0.9). Con el ABM extendido tambien se logró replicar la dinámica logística, aunque el crecimiento fue moderadamente más lento (Figura 10). Se alcanzó la capacidad de carga para \(t > 20\), diez tiempos más tarde que en el ABM base para los mismos parámetros. Este comportamiento parece consistente con la reducción, de aproximadamente el 50\%, de los agentes capaces de reproducirse y el aumento gradual en la probabilidad de muerte, que en consecuencia impacta negativamente la tasa de crecimiento poblacional haciendo más lento el proceso. Al igual que en el modelo base, se al alcanzó la capacidad de carga, con oscilaciones en un rango estable. \par
+
+Para los valores (0.3, 0.8) se observó una diferencia crítica. Esta combinación de valores, que en el modelo base enlenteció levemente el proceso sin cambiar la dinámica, llevó a la extinción súbita de la población en el modelo extendido (figura \ref{fig:abm2}). El $N(t)$ nunca supera el número inicial y decrece hasta extinguirse en \(t >30\). Esto pareciera indicar que la mayor complejidad del modelo extendido lo vuelve altamente sensible a las diferencias en las condiciones iniciales. \par
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.4\textwidth]{graficos/ABMextendido.png}
+    \caption{""}
+    \label{fig:abm2}
+\end{figure}
+
+
+En función de este cambio en el comportamiento de las trayectorias, para $pbirth$ fijo en 0.9, se realizó un análisis de sensibilidad sobre el parámetro $pdeath$ (figura \ref{fig:sens}) para estudiar con mayor precisión el valor crítico a partir del cual se genera el fenómeno de extinción . Al visualizar la trayectoria promedio para cada valor de pdeath estudiado, se observó que con valores $>0.2$  y $< 0.3$ se obtuvo un comportamiento similar al analizado en el ABM base, en cuanto a la forma de la trayectoria, pero sin alcanzar la capacidad de carga \((K = 500)\). Por ejemplo, en 0.2 la población promedio se estabilizó en valores cercanos a 300. Esto puede deberse a que, bajo los supuestos del ABM extendido, a estos niveles de $pdeath$, los valores de $pbirth$ no sean suficientes para alcanzar la capacidad establecida por los recursos ambientales y se alcance un equilibrio poblacional en valores más bajos que el esperado. \par
+
+\begin{figure}[ht]
+\centering
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/sensibilidadPD.png}
+    \caption{""}
+    \label{fig:sens}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{graficos/solEDOsensPD.png}
+    \caption{""}
+    \label{fig:solEDO}
+\end{minipage}
+\end{figure}
+
+El parámetro $pdeath$, no constante sino incremental con la edad, podría estar capturando un impacto similar al de la carga, modulando determinantemente el crecimiento y, por lo tanto, evitando el alcance de la capacidad total. Que el aumento de la mortalidad pueda tener el mismo impacto que una disminución en la capacidad del ambiente, podría interpretarse como que a pesar de la presencia de abundantes recursos, otros factores que aumentan la tasa de mortalidad, como la presencia de enfermedades, imponen un nuevo límite  al crecimiento alcanzable. A su vez, podría decirse que el ajuste de la tasa de mortalidad ocurriría en escenarios en los que una degradación del ambiente reduzca la $K$ efectiva para la población. \par
+
+Para valores cercanos o \(>0.3\) se detectó la zona crítica donde se produce el cambio en comportamiento, se pierde la forma de crecimiento logístico y la población se extingue cada vez mas rápido. Esto puede deberse a que en las condiciones del ABM extendido, incluso una $pbirth$ inicial óptima, que va disminuyendo con la dinámica logística, a partir de esos valores no logra compensar la $pdeath$ que va aumentando para los agentes longevos. \par 
+
+Este comportamiento no estuvo presente en el modelo clásico (EDO) para estos valores de $pdeath$ (figura \ref{fig:solEDO}). Aunque se disminuyó levemente la tasa de crecimiento, siempre se alcanzó la capacidad y no se presentaron extinciones. Esto evidencia la aparición en el modelo ABM de comportamientos no predecibles mediante el modelo determinista. Si se validan estos resultados, el modelo podría resultar de utilidad para el cuidado y conservación de especies, sirviendo como indicador para la necesidad de intervención al detectar valores de la tasa de mortalidad que impliquen un riesgo de extinción.  Un ejemplo de un ABM implementado con ese propósito se puede encontrar en \citeA{CARTER2015347} .\par
+
+Por último, este estudio gráfico y cualitativo, se podría complementar estimando la probabilidad de extensión y realizando un análisis de sensibilidad multivariado en el que se contemple el efecto combinado de las variaciones de ambos parámetros, $pdeath$ y $pbirth$. 
+
+\section{Conclusión}
+El ABM base y el extendido replicaron, como fenómeno emergente de las dinámicas individuales de los agentes, un crecimiento poblacional logístico para valores óptimos (0.1, 0.9) de mortalidad y natalidad individual. La aleatoriedad de las simulaciones implicó distinciones entre la trayectorias obtenidas y la solución analítica de la ecuación logística; ya sea en cuanto a ritmo de crecimiento o en la presencia de oscilaciones al aproximarse a la carga ambiental ($K$). El modelo extendido, de mayor realismo y complejidad, presentó una alta sensibilidad a las condiciones iniciales, llevando a la exinción con probabilidades de mortalidad >0.3. En esta línea, se sugiere ampliar el estudio de los modelos implementados mediante un estudio comparativo con el modelo determinista discreto, estimación de las tasas poblacionales emergentes y un análisis de sensibilidad multivariado. 
+
+\bibliographystyle{apacite} % estilo APA
+%\nocite{*}
+\bibliography{refes}
+
+\end{document}

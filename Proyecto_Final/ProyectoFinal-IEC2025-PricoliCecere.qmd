@@ -120,22 +120,30 @@ df <- bind_rows(
   ABM_2$df_N |>  mutate(simu = "pD=0.3, pB=0.8")
 )
 
-ggplot(df) + geom_point(aes(x = t, y = N, color = simu, shape = "N")) +
+ggplot(df) + 
+  geom_hline(yintercept  = 55, color = viridis(20)[13],
+             linetype = "dashed", alpha = 0.8) +
+  geom_hline(yintercept  = 58, color = viridis(20)[2], 
+             linetype = "dashed", alpha = 0.8) +
+  geom_line(aes(x = t, y = N, color = simu), linewidth = 0.5 ) +
+  geom_line(aes(x = t, y = p*max(N), color = simu), 
+            linewidth = 0.5) +
+  geom_point(aes(x = t, y = N, color = simu, shape = "N"), size = 2.5) +
   geom_point(aes(x = t, y = p*max(N), color = simu, shape = "pB efectiva"),
-             size = 0.8) +
+             size = 2, stroke = 0.8, fill = "white") +
   labs(title = "Evolución en el tiempo de la población y la probabilidad efectiva de reproducción", subtitle = "ABM base",
        x = "Tiempo", 
        y = "Población N(t)\n Probabilidad de reproducción (%)", 
        color = "Parámetros") +
   scale_color_manual( values = viridis(20)[c(2,13)], name = "Simulación") +
   #scale_color_viridis(discrete = TRUE, option = "D") +
-  scale_shape_manual(values = c("N" = 16, "pB efectiva" = 17),
+  scale_shape_manual(values = c("N" = 16, "pB efectiva" = 22),
     name = "Variable") +
   theme_minimal() +
   theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5),
         plot.subtitle = element_text(size = 13, face = "italic", hjust = 0.5),
         legend.position = "bottom")
- 
+
 ```
 
 ### Solución de la EDO
